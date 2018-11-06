@@ -1,203 +1,247 @@
-; z80dasm 1.1.2
-; command line: C:\BATCH\z80dasm.exe -a -t -l -g 60500 -b blocks.txt superplott.bin
+; *****************************************************************************
+; * Superplott for XY 4150 and ZX Spectrum
+; *
+; * compile:
+; * z80asm -b superplott.asm
+; * appmake +zx -b superplott.bin --org 60500 -o superplott.tap
+; *
+; * disassembled: 
+; * z80dasm -a -t -l -g 60500 -b blocks.txt superplott.bin
+; *****************************************************************************
 
-	org	0ec54h
+        org     0ec54h
 
-	jp 0ee48h		;ec54	c3 48 ee 	. H . 
-	jp led7ah		;ec57	c3 7a ed 	. z . 
-	jp led96h		;ec5a	c3 96 ed 	. . . 
-	jp lee9ah		;ec5d	c3 9a ee 	. . . 
-	jp lf7ach		;ec60	c3 ac f7 	. . . 
-	jp lf773h		;ec63	c3 73 f7 	. s . 
+        jp 0ee48h               ;ec54   JP INIT
+        jp PUTX                 ;ec57
+        jp PUTY                 ;ec5a
+        jp ENTRY                ;ec5d
+        jp WRITE                ;ec60
+        jp LIST                 ;ec63
 
-; BLOCK 'WHE_X' (start 0xec66 end 0xec68)
-WHE_X_start:
-	defw 0faaah		;ec66	aa fa 	. . 
-WHE_X_end:
-	ld a,028h		;ec68	3e 28 	> ( 
-	ld (0ecf4h),a		;ec6a	32 f4 ec 	2 . . 
-	ld hl,D001_start		;ec6d	21 b6 ed 	! . . 
-	ld bc,07ffeh		;ec70	01 fe 7f 	. .  
-lec73h:
-	in a,(c)		;ec73	ed 78 	. x 
-	cpl			;ec75	2f 	/ 
-	and 01fh		;ec76	e6 1f 	. . 
-	ld (hl),a			;ec78	77 	w 
-	inc hl			;ec79	23 	# 
-	rrc b		;ec7a	cb 08 	. . 
-	jr c,lec73h		;ec7c	38 f5 	8 . 
-	push ix		;ec7e	dd e5 	. . 
-	ld ix,D001_start		;ec80	dd 21 b6 ed 	. ! . . 
-	bit 0,(ix+005h)		;ec84	dd cb 05 46 	. . . F 
-	call nz,sub_ed39h		;ec88	c4 39 ed 	. 9 . 
-	bit 3,(ix+003h)		;ec8b	dd cb 03 5e 	. . . ^ 
-	call nz,sub_ed3eh		;ec8f	c4 3e ed 	. > . 
-	bit 4,(ix+003h)		;ec92	dd cb 03 66 	. . . f 
-	call nz,sub_ed4eh		;ec96	c4 4e ed 	. N . 
-	bit 2,(ix+003h)		;ec99	dd cb 03 56 	. . . V 
-	call nz,sub_ed5ch		;ec9d	c4 5c ed 	. \ . 
-	bit 4,(ix+004h)		;eca0	dd cb 04 66 	. . . f 
-	call nz,sub_ed6ch		;eca4	c4 6c ed 	. l . 
-	bit 0,(ix+003h)		;eca7	dd cb 03 46 	. . . F 
-	jr nz,led29h		;ecab	20 7c 	  | 
-	ld ix,0edach		;ecad	dd 21 ac ed 	. ! . . 
-	ld hl,(lfac2h)		;ecb1	2a c2 fa 	* . . 
-	call sub_ecfdh		;ecb4	cd fd ec 	. . . 
-	inc ix		;ecb7	dd 23 	. # 
-	ld hl,(lfac4h)		;ecb9	2a c4 fa 	* . . 
-	call sub_ecfdh		;ecbc	cd fd ec 	. . . 
-	ld ix,0edach		;ecbf	dd 21 ac ed 	. ! . . 
-	ld (ix-001h),0ffh		;ecc3	dd 36 ff ff 	. 6 . . 
+WHE_X:
+        defw 0faaah             ;ec66   aa fa
+        
+; *****************************************************************************
+; * Move Free - PRINT #4; "mf"
+; *
+; * Reads cursor (5,6,7,8), 0 = quit, q = run fast
+; *****************************************************************************
+MV_FREE:
+        ld a,028h               ;ec68   load 40 into a
+        ld (0ecf4h),a           ;ec6a   modify of ld bc,00001h at ecf2
+        
+                                ;Reading keyboard:
+                                ;-----------------------------------------
+                                ;port / bit ->              b0 b1 b2 b3 b4
+                                ;-----------------------------------------                            
+                                ;7FFE - 01111111 11111110 - sp ss  M  N  B
+                                ;BFFE - 10111111 11111110 - en  L  K  J  H
+                                ;DFFE - 11011111 11111110 -  P  O  I  U  Y
+                                ;EFFE - 11101111 11111110 -  0  9  8  7  6
+                                ;F7FE - 11110111 11111110 -  1  2  3  4  5
+                                ;FBFE - 11111011 11111110 -  Q  W  E  R  T
+                                ;FDFE - 11111101 11111110 -  A  S  D  F  G
+                                ;FEFE - 11111110 11111110 - sh  Z  X  C  V
+                                ;-----------------------------------------
+                                 
+        ld hl,D001_start        ;ec6d   load v[0] into hl 
+        ld bc,07ffeh            ;ec70   load bc with the keyboard row port 
+read_keys:
+        in a,(c)                ;ec73   read value from keyboard port 
+        cpl                     ;ec75   complement - invert all bits in a
+        and 01fh                ;ec76   mask out keys 0001 1111 
+        ld (hl),a               ;ec78   store v[0] 
+        inc hl                  ;ec79   inc of base address 
+        rrc b                   ;ec7a    
+        jr c,read_keys          ;ec7c   8-times (b = 0111 1111) 
+        push ix                 ;ec7e 
+        ld ix,D001_start        ;ec80 
+        bit 0,(ix+005h)         ;ec84   test of key Q (quick) 
+        call nz,MOVE_FREE_S1    ;ec88 
+        bit 3,(ix+003h)         ;ec8b   test of key 7
+        call nz,MOVE_FREE_S2    ;ec8f   move y+ 
+        bit 4,(ix+003h)         ;ec92   test of key 6
+        call nz,MOVE_FREE_S3    ;ec96   move y-
+        bit 2,(ix+003h)         ;ec99   test of key 8
+        call nz,MOVE_FREE_S4    ;ec9d   move x+
+        bit 4,(ix+004h)         ;eca0   test of key 5
+        call nz,MOVE_FREE_S5    ;eca4   move x-
+        bit 0,(ix+003h)         ;eca7   test of key 0 (quit)
+        jr nz,led29h            ;ecab 
+        ld ix,0edach            ;ecad   dd 21 ac ed 	. ! . . 
+        ld hl,(lfac2h)          ;ecb1   2a c2 fa 	* . . 
+        call MOVE_FREE_S6       ;ecb4   cd fd ec 	. . . 
+        inc ix                  ;ecb7   dd 23 	. # 
+        ld hl,(lfac4h)          ;ecb9   2a c4 fa 	* . . 
+        call MOVE_FREE_S6       ;ecbc   cd fd ec 	. . . 
+        ld ix,0edach            ;ecbf   dd 21 ac ed 	. ! . . 
+        ld (ix-001h),0ffh       ;ecc3   dd 36 ff ff 	. 6 . . 
 lecc7h:
-	ld a,(ix+000h)		;ecc7	dd 7e 00 	. ~ . 
-	inc ix		;ecca	dd 23 	. # 
-	cp 00bh		;eccc	fe 0b 	. . 
-	jr nc,lecf0h		;ecce	30 20 	0   
-	add a,a			;ecd0	87 	. 
-	add a,a			;ecd1	87 	. 
-	add a,a			;ecd2	87 	. 
-	ld c,a			;ecd3	4f 	O 
-	ld b,000h		;ecd4	06 00 	. . 
-	ld hl,03d80h		;ecd6	21 80 3d 	! . = 
-	add hl,bc			;ecd9	09 	. 
-	ld a,(0edabh)		;ecda	3a ab ed 	: . . 
-	inc a			;ecdd	3c 	< 
-	ld (0edabh),a		;ecde	32 ab ed 	2 . . 
-	ld de,050e0h		;ece1	11 e0 50 	. . P 
-	add a,e			;ece4	83 	. 
-	ld e,a			;ece5	5f 	_ 
-	ld b,008h		;ece6	06 08 	. . 
+        ld a,(ix+000h)          ;ecc7   dd 7e 00 	. ~ . 
+        inc ix                  ;ecca   dd 23 	. # 
+        cp 00bh                 ;eccc   fe 0b 	. . 
+        jr nc,lecf0h            ;ecce   30 20 	0   
+        add a,a                 ;ecd0   87 	. 
+        add a,a                 ;ecd1   87 	. 
+        add a,a                 ;ecd2   87 	. 
+        ld c,a                  ;ecd3   4f 	O 
+        ld b,000h               ;ecd4   06 00 	. . 
+        ld hl,03d80h            ;ecd6   21 80 3d 	! . = 
+        add hl,bc               ;ecd9   09 	. 
+        ld a,(0edabh)           ;ecda   3a ab ed 	: . . 
+        inc a                   ;ecdd   3c 	< 
+        ld (0edabh),a           ;ecde   32 ab ed 	2 . . 
+        ld de,050e0h            ;ece1   11 e0 50 	. . P 
+        add a,e                 ;ece4   83 	. 
+        ld e,a                  ;ece5   5f 	_ 
+        ld b,008h               ;ece6   06 08 	. . 
 lece8h:
-	ld a,(hl)			;ece8	7e 	~ 
-	ld (de),a			;ece9	12 	. 
-	inc hl			;ecea	23 	# 
-	inc d			;eceb	14 	. 
-	djnz lece8h		;ecec	10 fa 	. . 
-	jr lecc7h		;ecee	18 d7 	. . 
-lecf0h:
-	pop ix		;ecf0	dd e1 	. . 
-	ld bc,00001h		;ecf2	01 01 00 	. . . 
-lecf5h:
-	dec bc			;ecf5	0b 	. 
-	ld a,c			;ecf6	79 	y 
-	or b			;ecf7	b0 	. 
-	jr nz,lecf5h		;ecf8	20 fb 	  . 
-	jp WHE_X_end		;ecfa	c3 68 ec 	. h . 
-sub_ecfdh:
-	ld de,003e8h		;ecfd	11 e8 03 	. . . 
-	call sub_ed16h		;ed00	cd 16 ed 	. . . 
-	ld de,00064h		;ed03	11 64 00 	. d . 
-	call sub_ed16h		;ed06	cd 16 ed 	. . . 
-	ld de,0000ah		;ed09	11 0a 00 	. . . 
-	call sub_ed16h		;ed0c	cd 16 ed 	. . . 
-	ld de,00001h		;ed0f	11 01 00 	. . . 
-	call sub_ed16h		;ed12	cd 16 ed 	. . . 
-	ret			;ed15	c9 	. 
-sub_ed16h:
-	ld (ix+000h),000h		;ed16	dd 36 00 00 	. 6 . . 
-led1ah:
-	or a			;ed1a	b7 	. 
-	sbc hl,de		;ed1b	ed 52 	. R 
-	jp m,led25h		;ed1d	fa 25 ed 	. % . 
-	inc (ix+000h)		;ed20	dd 34 00 	. 4 . 
-	jr led1ah		;ed23	18 f5 	. . 
-led25h:
-	add hl,de			;ed25	19 	. 
-	inc ix		;ed26	dd 23 	. # 
-	ret			;ed28	c9 	. 
-led29h:
-	pop ix		;ed29	dd e1 	. . 
-	ld hl,lfac2h		;ed2b	21 c2 fa 	! . . 
-	ld de,0faaah		;ed2e	11 aa fa 	. . . 
-	push de			;ed31	d5 	. 
-	call sub_f470h		;ed32	cd 70 f4 	. p . 
-	pop hl			;ed35	e1 	. 
-	jp sub_f470h		;ed36	c3 70 f4 	. p . 
-sub_ed39h:
-	xor a			;ed39	af 	. 
-	ld (0ecf4h),a		;ed3a	32 f4 ec 	2 . . 
-	ret			;ed3d	c9 	. 
-sub_ed3eh:
-	out (0d7h),a		;ed3e	d3 d7 	. . 
-	ld hl,(lfac4h)		;ed40	2a c4 fa 	* . . 
-	inc hl			;ed43	23 	# 
-	ld (lfac4h),hl		;ed44	22 c4 fa 	" . . 
-	ld de,006d6h		;ed47	11 d6 06 	. . . 
-	or a			;ed4a	b7 	. 
-	sbc hl,de		;ed4b	ed 52 	. R 
-	ret m			;ed4d	f8 	. 
-sub_ed4eh:
-	out (0dfh),a		;ed4e	d3 df 	. . 
-	ld hl,(lfac4h)		;ed50	2a c4 fa 	* . . 
-	dec hl			;ed53	2b 	+ 
-	ld (lfac4h),hl		;ed54	22 c4 fa 	" . . 
-	bit 7,h		;ed57	cb 7c 	. | 
-	ret z			;ed59	c8 	. 
-	jr sub_ed3eh		;ed5a	18 e2 	. . 
-sub_ed5ch:
-	out (0c7h),a		;ed5c	d3 c7 	. . 
-	ld hl,(lfac2h)		;ed5e	2a c2 fa 	* . . 
-	inc hl			;ed61	23 	# 
-	ld (lfac2h),hl		;ed62	22 c2 fa 	" . . 
-	ld de,009c4h		;ed65	11 c4 09 	. . . 
-	or a			;ed68	b7 	. 
-	sbc hl,de		;ed69	ed 52 	. R 
-	ret m			;ed6b	f8 	. 
-sub_ed6ch:
-	out (0cfh),a		;ed6c	d3 cf 	. . 
-	ld hl,(lfac2h)		;ed6e	2a c2 fa 	* . . 
-	dec hl			;ed71	2b 	+ 
-	ld (lfac2h),hl		;ed72	22 c2 fa 	" . . 
-	bit 7,h		;ed75	cb 7c 	. | 
-	ret z			;ed77	c8 	. 
-	jr sub_ed5ch		;ed78	18 e2 	. . 
-led7ah:
-	ld hl,lfac6h		;ed7a	21 c6 fa 	! . . 
-	ld (05c68h),hl		;ed7d	22 68 5c 	" h \ 
-	ld de,(0faaah)		;ed80	ed 5b aa fa 	. [ . . 
-	call sub_ef98h		;ed84	cd 98 ef 	. . . 
-	rst 28h			;ed87	ef 	. 
-	call pe,0eb03h		;ed88	ec 03 eb 	. . . 
-	dec b			;ed8b	05 	. 
-	jr c,$-29		;ed8c	38 e1 	8 . 
-	ld hl,05c92h		;ed8e	21 92 5c 	! . \ 
-	ld (05c68h),hl		;ed91	22 68 5c 	" h \ 
-	or a			;ed94	b7 	. 
-	ret			;ed95	c9 	. 
-led96h:
-	ld hl,lfac6h		;ed96	21 c6 fa 	! . . 
-	ld (05c68h),hl		;ed99	22 68 5c 	" h \ 
-	ld de,(lfaach)		;ed9c	ed 5b ac fa 	. [ . . 
-	call sub_ef98h		;eda0	cd 98 ef 	. . . 
-	rst 28h			;eda3	ef 	. 
-	defb 0edh;next byte illegal after ed		;eda4	ed 	. 
-	inc bc			;eda5	03 	. 
-	ex de,hl			;eda6	eb 	. 
-	dec b			;eda7	05 	. 
-	jr c,ledc2h		;eda8	38 18 	8 . 
-	jp po,00000h		;edaa	e2 00 00 	. . . 
-	nop			;edad	00 	. 
-	nop			;edae	00 	. 
-	nop			;edaf	00 	. 
-	ld a,(bc)			;edb0	0a 	. 
-	nop			;edb1	00 	. 
-	nop			;edb2	00 	. 
-	nop			;edb3	00 	. 
-	nop			;edb4	00 	. 
-	dec bc			;edb5	0b 	. 
+        ld a,(hl)               ;ece8   7e 	~ 
+        ld (de),a               ;ece9   12 	. 
+        inc hl                  ;ecea   23 	# 
+        inc d                   ;eceb   14 	. 
+        djnz lece8h             ;ecec   10 fa 	. . 
+        jr lecc7h               ;ecee   18 d7 	. .
 
-; BLOCK 'D001' (start 0xedb6 end 0xedbf)
-D001_start:
-	defb 0e2h		;edb6	e2 	. 
-	defb 000h		;edb7	00 	. 
-	defb 000h		;edb8	00 	. 
-	defb 000h		;edb9	00 	. 
-	defb 000h		;edba	00 	. 
-	defb 000h		;edbb	00 	. 
-	defb 00ah		;edbc	0a 	. 
-	defb 000h		;edbd	00 	. 
-	defb 000h		;edbe	00 	. 
-D001_end:
+; Wait?
+lecf0h:
+        pop ix                  ;ecf0 
+        ld bc,00001h            ;ecf2	self modified at ecf2
+lecf5h:
+        dec bc                  ;ecf5 
+        ld a,c                  ;ecf6 
+        or b                    ;ecf7 
+        jr nz,lecf5h            ;ecf8 
+        jp MV_FREE              ;ecfa
+
+; *****************************************************************************
+; * Move Free - END
+; *****************************************************************************
+
+MOVE_FREE_S6:
+        ld de,003e8h            ;ecfd	11 e8 03 	. . . 
+        call sub_ed16h          ;ed00	cd 16 ed 	. . . 
+        ld de,00064h            ;ed03	11 64 00 	. d . 
+        call sub_ed16h          ;ed06	cd 16 ed 	. . . 
+        ld de,0000ah            ;ed09	11 0a 00 	. . . 
+        call sub_ed16h          ;ed0c	cd 16 ed 	. . . 
+        ld de,00001h            ;ed0f	11 01 00 	. . . 
+        call sub_ed16h          ;ed12	cd 16 ed 	. . . 
+        ret                     ;ed15	c9 	. 
+sub_ed16h:
+        ld (ix+000h),000h       ;ed16	dd 36 00 00 	. 6 . . 
+led1ah:
+        or a                    ;ed1a	b7 	. 
+        sbc hl,de               ;ed1b	ed 52 	. R 
+        jp m,led25h             ;ed1d	fa 25 ed 	. % . 
+        inc (ix+000h)           ;ed20	dd 34 00 	. 4 . 
+        jr led1ah               ;ed23	18 f5 	. . 
+led25h:
+        add hl,de               ;ed25	19 	. 
+        inc ix                  ;ed26	dd 23 	. # 
+        ret                     ;ed28	c9 	. 
+
+; Move free: run fast
+led29h:
+        pop ix                  ;ed29
+        ld hl,lfac2h            ;ed2b
+        ld de,0faaah            ;ed2e
+        push de                 ;ed31
+        call sub_f470h          ;ed32
+        pop hl                  ;ed35
+        jp sub_f470h            ;ed36
+
+
+; Move free: quit
+MOVE_FREE_S1:
+        xor a                   ;ed39   a = 0
+        ld (0ecf4h),a           ;ed3a   modify of ld bc,00001h at ecf2 
+        ret                     ;ed3d
+
+; Move free: move y
+MOVE_FREE_S2:
+        out (0d7h),a            ;ed3e   move y 
+        ld hl,(lfac4h)          ;ed40 
+        inc hl                  ;ed43 
+        ld (lfac4h),hl          ;ed44 
+        ld de,006d6h            ;ed47	load MAX_Y = 1750 
+        or a                    ;ed4a 
+        sbc hl,de               ;ed4b 
+        ret m                   ;ed4d 
+MOVE_FREE_S3:
+        out (0dfh),a            ;ed4e 
+        ld hl,(lfac4h)          ;ed50 
+        dec hl                  ;ed53 
+        ld (lfac4h),hl          ;ed54 
+        bit 7,h                 ;ed57 
+        ret z                   ;ed59 
+        jr MOVE_FREE_S2         ;ed5a
+        
+; Move free: move x
+MOVE_FREE_S4:
+        out (0c7h),a            ;ed5c   move x 
+        ld hl,(lfac2h)          ;ed5e 
+        inc hl                  ;ed61 
+        ld (lfac2h),hl          ;ed62 
+        ld de,009c4h            ;ed65   load MAX_Y = 2500 
+        or a                    ;ed68 
+        sbc hl,de               ;ed69 
+        ret m                   ;ed6b 
+MOVE_FREE_S5:
+        out (0cfh),a            ;ed6c 
+        ld hl,(lfac2h)          ;ed6e 
+        dec hl                  ;ed71 
+        ld (lfac2h),hl          ;ed72 
+        bit 7,h                 ;ed75 
+        ret z                   ;ed77 
+        jr MOVE_FREE_S4         ;ed78 
+PUTX:
+        ld hl,lfac6h            ;ed7a	21 c6 fa 	! . . 
+        ld (05c68h),hl          ;ed7d	22 68 5c 	" h \ 
+        ld de,(0faaah)          ;ed80	ed 5b aa fa 	. [ . . 
+        call sub_ef98h          ;ed84	cd 98 ef 	. . . 
+        rst 28h                 ;ed87	ef 	. 
+        call pe,0eb03h          ;ed88	ec 03 eb 	. . . 
+        dec b                   ;ed8b	05 	. 
+        jr c,$-29               ;ed8c	38 e1 	8 . 
+        ld hl,05c92h            ;ed8e	21 92 5c 	! . \ 
+        ld (05c68h),hl          ;ed91	22 68 5c 	" h \ 
+        or a                    ;ed94	b7 	. 
+        ret                     ;ed95	c9 	. 
+PUTY:
+        ld hl,lfac6h            ;ed96	21 c6 fa 	! . . 
+        ld (05c68h),hl          ;ed99	22 68 5c 	" h \ 
+        ld de,(lfaach)          ;ed9c	ed 5b ac fa 	. [ . . 
+        call sub_ef98h          ;eda0	cd 98 ef 	. . . 
+        rst 28h                 ;eda3	ef 	. 
+        defb 0edh               ;next byte illegal after ed		;eda4	ed 	. 
+        inc bc                  ;eda5	03 	. 
+        ex de,hl                ;eda6	eb 	. 
+        dec b                   ;eda7	05 	. 
+        jr c,ledc2h             ;eda8	38 18 	8 . 
+        jp po,00000h            ;edaa	e2 00 00 	. . . 
+        nop                     ;edad	00 	. 
+        nop                     ;edae	00 	. 
+        nop                     ;edaf	00 	. 
+        ld a,(bc)               ;edb0	0a 	. 
+        nop                     ;edb1	00 	. 
+        nop                     ;edb2	00 	. 
+        nop                     ;edb3	00 	. 
+        nop                     ;edb4	00 	. 
+        dec bc                  ;edb5	0b 	. 
+
+D001_start:                     ;             b0 b1 b2 b3 b4
+        defb 0e2h               ;edb6   keys: sp ss  M  N  B
+        defb 000h               ;edb7   keys: en  L  K  J  H
+        defb 000h               ;edb8   keys:  P  O  I  U  Y
+        defb 000h               ;edb9   keys:  0  9  8  7  6
+        defb 000h               ;edba   keys:  1  2  3  4  5
+        defb 000h               ;edbb   keys:  Q  W  E  R  T
+        defb 00ah               ;edbc   keys:  A  S  D  F  G
+        defb 000h               ;edbd   keys: sh  Z  X  C  V
+        defb 000h               ;edbe
+D001_end: 
+ 
 	nop			;edbf	00 	. 
 	nop			;edc0	00 	. 
 	dec bc			;edc1	0b 	. 
@@ -342,7 +386,7 @@ lee89h:
 	adc a,a			;ee97	8f 	. 
 	xor a			;ee98	af 	. 
 	adc a,a			;ee99	8f 	. 
-lee9ah:
+ENTRY:
 	call sub_fa67h		;ee9a	cd 67 fa 	. g . 
 	cp 006h		;ee9d	fe 06 	. . 
 	jr nz,leea3h		;ee9f	20 02 	  . 
@@ -1684,7 +1728,7 @@ sub_f740h:
 	call sub_f9c9h		;f769	cd c9 f9 	. . . 
 	ld (ix+015h),03eh		;f76c	dd 36 15 3e 	. 6 . > 
 	jp lf21dh		;f770	c3 1d f2 	. . . 
-lf773h:
+LIST:
 	call sub_fa67h		;f773	cd 67 fa 	. g . 
 	ld ix,lfa76h		;f776	dd 21 76 fa 	. ! v . 
 	push af			;f77a	f5 	. 
@@ -1713,7 +1757,7 @@ lf799h:
 lf7a6h:
 	call sub_f7bfh		;f7a6	cd bf f7 	. . . 
 	jp lef75h		;f7a9	c3 75 ef 	. u . 
-lf7ach:
+WRITE:
 	call sub_fa67h		;f7ac	cd 67 fa 	. g . 
 	ld ix,lfa76h		;f7af	dd 21 76 fa 	. ! v . 
 	push af			;f7b3	f5 	. 
