@@ -28,7 +28,8 @@ WHE_X:
 ; *****************************************************************************
 MV_FREE:
         ld a,028h               ;ec68   load 40 into a
-        ld (0ecf4h),a           ;ec6a   modify of ld bc,00001h at ecf2
+        ld (0ecf4h),a           ;ec6a   modify of ld bc,0XX01h at ecf2
+                                ;       waiting interval?
         
                                 ;Reading keyboard:
                                 ;-----------------------------------------
@@ -44,7 +45,7 @@ MV_FREE:
                                 ;FEFE - 11111110 11111110 - sh  Z  X  C  V
                                 ;-----------------------------------------
                                  
-        ld hl,D001_start        ;ec6d   load v[0] into hl 
+        ld hl,D001_keyb_snap    ;ec6d   load v[0] into hl 
         ld bc,07ffeh            ;ec70   load bc with the keyboard row port 
 read_keys:
         in a,(c)                ;ec73   read value from keyboard port 
@@ -52,30 +53,30 @@ read_keys:
         and 01fh                ;ec76   mask out keys 0001 1111 
         ld (hl),a               ;ec78   store v[0] 
         inc hl                  ;ec79   inc of base address 
-        rrc b                   ;ec7a    
-        jr c,read_keys          ;ec7c   8-times (b = 0111 1111) 
+        rrc b                   ;ec7a   calc next row port addr 
+        jr c,read_keys          ;ec7c   8-times loop (b = 0111 1111) 
         push ix                 ;ec7e 
-        ld ix,D001_start        ;ec80 
-        bit 0,(ix+005h)         ;ec84   test of key Q (quick) 
-        call nz,MOVE_FREE_S1    ;ec88 
-        bit 3,(ix+003h)         ;ec8b   test of key 7
-        call nz,MOVE_FREE_S2    ;ec8f   move y+ 
-        bit 4,(ix+003h)         ;ec92   test of key 6
-        call nz,MOVE_FREE_S3    ;ec96   move y-
-        bit 2,(ix+003h)         ;ec99   test of key 8
-        call nz,MOVE_FREE_S4    ;ec9d   move x+
-        bit 4,(ix+004h)         ;eca0   test of key 5
-        call nz,MOVE_FREE_S5    ;eca4   move x-
+        ld ix,D001_keyb_snap    ;ec80 
+        bit 0,(ix+005h)         ;ec84   test of key Q (quickly) 
+        call nz,mf_quickly      ;ec88 
+        bit 3,(ix+003h)         ;ec8b   test of key 7 (up)
+        call nz,mf_y_plus       ;ec8f   move y+ 
+        bit 4,(ix+003h)         ;ec92   test of key 6 (down)
+        call nz,mf_y_minus      ;ec96   move y-
+        bit 2,(ix+003h)         ;ec99   test of key 8 (right)
+        call nz,mf_x_plus       ;ec9d   move x+
+        bit 4,(ix+004h)         ;eca0   test of key 5 (left)
+        call nz,mf_x_minus      ;eca4   move x-
         bit 0,(ix+003h)         ;eca7   test of key 0 (quit)
-        jr nz,led29h            ;ecab 
-        ld ix,0edach            ;ecad   dd 21 ac ed 	. ! . . 
-        ld hl,(lfac2h)          ;ecb1   2a c2 fa 	* . . 
-        call MOVE_FREE_S6       ;ecb4   cd fd ec 	. . . 
-        inc ix                  ;ecb7   dd 23 	. # 
-        ld hl,(lfac4h)          ;ecb9   2a c4 fa 	* . . 
-        call MOVE_FREE_S6       ;ecbc   cd fd ec 	. . . 
-        ld ix,0edach            ;ecbf   dd 21 ac ed 	. ! . . 
-        ld (ix-001h),0ffh       ;ecc3   dd 36 ff ff 	. 6 . . 
+        jr nz,mf_quit           ;ecab 
+        ld ix,D002              ;ecad   addr for x in decimal 
+        ld hl,(D004_x_pos)      ;ecb1   load x pos 
+        call mf_cnv_to_decimal  ;ecb4   convert to decimal 
+        inc ix                  ;ecb7   addr for y in decimal
+        ld hl,(D003_y_pos)      ;ecb9   load y pos 
+        call mf_cnv_to_decimal  ;ecbc   convert to decimal 
+        ld ix,D002              ;ecbf 
+        ld (ix-001h),0ffh       ;ecc3 
 lecc7h:
         ld a,(ix+000h)          ;ecc7   dd 7e 00 	. ~ . 
         inc ix                  ;ecca   dd 23 	. # 
@@ -106,7 +107,7 @@ lece8h:
 ; Wait?
 lecf0h:
         pop ix                  ;ecf0 
-        ld bc,00001h            ;ecf2	self modified at ecf2
+        ld bc,00001h            ;ecf2   self modified by ec6a
 lecf5h:
         dec bc                  ;ecf5 
         ld a,c                  ;ecf6 
@@ -118,33 +119,34 @@ lecf5h:
 ; * Move Free - END
 ; *****************************************************************************
 
-MOVE_FREE_S6:
-        ld de,003e8h            ;ecfd	11 e8 03 	. . . 
-        call sub_ed16h          ;ed00	cd 16 ed 	. . . 
-        ld de,00064h            ;ed03	11 64 00 	. d . 
-        call sub_ed16h          ;ed06	cd 16 ed 	. . . 
-        ld de,0000ah            ;ed09	11 0a 00 	. . . 
-        call sub_ed16h          ;ed0c	cd 16 ed 	. . . 
-        ld de,00001h            ;ed0f	11 01 00 	. . . 
-        call sub_ed16h          ;ed12	cd 16 ed 	. . . 
-        ret                     ;ed15	c9 	. 
+; Convert hl to decimal and write result to (ix)
+mf_cnv_to_decimal:
+        ld de,003e8h            ;ecfd   de <- 1000 
+        call sub_ed16h          ;ed00 
+        ld de,00064h            ;ed03   de <- 100 
+        call sub_ed16h          ;ed06 
+        ld de,0000ah            ;ed09   de <- 10 
+        call sub_ed16h          ;ed0c 
+        ld de,00001h            ;ed0f   de <- 1 
+        call sub_ed16h          ;ed12 
+        ret                     ;ed15 
 sub_ed16h:
-        ld (ix+000h),000h       ;ed16	dd 36 00 00 	. 6 . . 
-led1ah:
-        or a                    ;ed1a	b7 	. 
-        sbc hl,de               ;ed1b	ed 52 	. R 
-        jp m,led25h             ;ed1d	fa 25 ed 	. % . 
-        inc (ix+000h)           ;ed20	dd 34 00 	. 4 . 
-        jr led1ah               ;ed23	18 f5 	. . 
+        ld (ix+000h),000h       ;ed16 
+led1ah:                         ;     division by de
+        or a                    ;ed1a 
+        sbc hl,de               ;ed1b 
+        jp m,led25h             ;ed1d 
+        inc (ix+000h)           ;ed20 
+        jr led1ah               ;ed23 
 led25h:
-        add hl,de               ;ed25	19 	. 
-        inc ix                  ;ed26	dd 23 	. # 
-        ret                     ;ed28	c9 	. 
+        add hl,de               ;ed25 
+        inc ix                  ;ed26 
+        ret                     ;ed28 
 
-; Move free: run fast
-led29h:
+; Move free: quit
+mf_quit:
         pop ix                  ;ed29
-        ld hl,lfac2h            ;ed2b
+        ld hl,D004_x_pos        ;ed2b
         ld de,0faaah            ;ed2e
         push de                 ;ed31
         call sub_f470h          ;ed32
@@ -152,49 +154,49 @@ led29h:
         jp sub_f470h            ;ed36
 
 
-; Move free: quit
-MOVE_FREE_S1:
+; Move free: quickly
+mf_quickly:
         xor a                   ;ed39   a = 0
         ld (0ecf4h),a           ;ed3a   modify of ld bc,00001h at ecf2 
         ret                     ;ed3d
 
 ; Move free: move y
-MOVE_FREE_S2:
+mf_y_plus:
         out (0d7h),a            ;ed3e   move y 
-        ld hl,(lfac4h)          ;ed40 
+        ld hl,(D003_y_pos)      ;ed40 
         inc hl                  ;ed43 
-        ld (lfac4h),hl          ;ed44 
+        ld (D003_y_pos),hl      ;ed44 
         ld de,006d6h            ;ed47	load MAX_Y = 1750 
         or a                    ;ed4a 
         sbc hl,de               ;ed4b 
         ret m                   ;ed4d 
-MOVE_FREE_S3:
+mf_y_minus:
         out (0dfh),a            ;ed4e 
-        ld hl,(lfac4h)          ;ed50 
+        ld hl,(D003_y_pos)      ;ed50 
         dec hl                  ;ed53 
-        ld (lfac4h),hl          ;ed54 
+        ld (D003_y_pos),hl      ;ed54 
         bit 7,h                 ;ed57 
         ret z                   ;ed59 
-        jr MOVE_FREE_S2         ;ed5a
+        jr mf_y_plus            ;ed5a
         
 ; Move free: move x
-MOVE_FREE_S4:
+mf_x_plus:
         out (0c7h),a            ;ed5c   move x 
-        ld hl,(lfac2h)          ;ed5e 
+        ld hl,(D004_x_pos)      ;ed5e 
         inc hl                  ;ed61 
-        ld (lfac2h),hl          ;ed62 
+        ld (D004_x_pos),hl      ;ed62 
         ld de,009c4h            ;ed65   load MAX_Y = 2500 
         or a                    ;ed68 
         sbc hl,de               ;ed69 
         ret m                   ;ed6b 
-MOVE_FREE_S5:
+mf_x_minus:
         out (0cfh),a            ;ed6c 
-        ld hl,(lfac2h)          ;ed6e 
+        ld hl,(D004_x_pos)      ;ed6e 
         dec hl                  ;ed71 
-        ld (lfac2h),hl          ;ed72 
+        ld (D004_x_pos),hl      ;ed72 
         bit 7,h                 ;ed75 
         ret z                   ;ed77 
-        jr MOVE_FREE_S4         ;ed78 
+        jr mf_x_plus            ;ed78 
 PUTX:
         ld hl,lfac6h            ;ed7a	21 c6 fa 	! . . 
         ld (05c68h),hl          ;ed7d	22 68 5c 	" h \ 
@@ -219,18 +221,21 @@ PUTY:
         ex de,hl                ;eda6	eb 	. 
         dec b                   ;eda7	05 	. 
         jr c,ledc2h             ;eda8	38 18 	8 . 
-        jp po,00000h            ;edaa	e2 00 00 	. . . 
-        nop                     ;edad	00 	. 
-        nop                     ;edae	00 	. 
-        nop                     ;edaf	00 	. 
-        ld a,(bc)               ;edb0	0a 	. 
-        nop                     ;edb1	00 	. 
-        nop                     ;edb2	00 	. 
-        nop                     ;edb3	00 	. 
-        nop                     ;edb4	00 	. 
-        dec bc                  ;edb5	0b 	. 
+        defb 0e2h               ;edaa	e2
+        nop                     ;edab   00
+        
+D002:   defb 000h               ;edac   y in decimal
+        defb 000h               ;edad
+        defb 000h               ;edae
+        defb 000h               ;edaf
+        defb 00ah               ;edb0
+        defb 000h               ;edb1   x in decimal
+        defb 000h               ;edb2
+        defb 000h               ;edb3
+        defb 000h               ;edb4
+        defb 00bh               ;edb5
 
-D001_start:                     ;             b0 b1 b2 b3 b4
+D001_keyb_snap:                 ;             b0 b1 b2 b3 b4
         defb 0e2h               ;edb6   keys: sp ss  M  N  B
         defb 000h               ;edb7   keys: en  L  K  J  H
         defb 000h               ;edb8   keys:  P  O  I  U  Y
@@ -239,9 +244,7 @@ D001_start:                     ;             b0 b1 b2 b3 b4
         defb 000h               ;edbb   keys:  Q  W  E  R  T
         defb 00ah               ;edbc   keys:  A  S  D  F  G
         defb 000h               ;edbd   keys: sh  Z  X  C  V
-        defb 000h               ;edbe
-D001_end: 
- 
+        defb 000h               ;edbe 
 	nop			;edbf	00 	. 
 	nop			;edc0	00 	. 
 	dec bc			;edc1	0b 	. 
@@ -366,8 +369,8 @@ lee75h:
 	dec c			;ee79	0d 	. 
 	jr nz,lee73h		;ee7a	20 f7 	  . 
 	ld hl,00000h		;ee7c	21 00 00 	! . . 
-	ld (lfac2h),hl		;ee7f	22 c2 fa 	" . . 
-	ld (lfac4h),hl		;ee82	22 c4 fa 	" . . 
+	ld (D004_x_pos),hl		;ee7f	22 c2 fa 	" . . 
+	ld (D003_y_pos),hl		;ee82	22 c4 fa 	" . . 
 	ret			;ee85	c9 	. 
 sub_ee86h:
 	ld bc,00000h		;ee86	01 00 00 	. . . 
@@ -1214,14 +1217,14 @@ sub_f3e9h:
 	ld hl,lfac6h		;f420	21 c6 fa 	! . . 
 	push hl			;f423	e5 	. 
 	ld hl,(lfac6h)		;f424	2a c6 fa 	* . . 
-	ld de,(lfac2h)		;f427	ed 5b c2 fa 	. [ . . 
+	ld de,(D004_x_pos)		;f427	ed 5b c2 fa 	. [ . . 
 	and a			;f42b	a7 	. 
 	sbc hl,de		;f42c	ed 52 	. R 
 	pop hl			;f42e	e1 	. 
 	push hl			;f42f	e5 	. 
 	call nz,sub_f598h		;f430	c4 98 f5 	. . . 
 	ld hl,(lfac8h)		;f433	2a c8 fa 	* . . 
-	ld de,(lfac4h)		;f436	ed 5b c4 fa 	. [ . . 
+	ld de,(D003_y_pos)		;f436	ed 5b c4 fa 	. [ . . 
 	and a			;f43a	a7 	. 
 	sbc hl,de		;f43b	ed 52 	. R 
 	pop hl			;f43d	e1 	. 
@@ -1460,9 +1463,9 @@ sub_f598h:
 	ld a,003h		;f5a1	3e 03 	> . 
 	ld (lf680h),a		;f5a3	32 80 f6 	2 . . 
 	exx			;f5a6	d9 	. 
-	ld de,(lfac2h)		;f5a7	ed 5b c2 fa 	. [ . . 
+	ld de,(D004_x_pos)		;f5a7	ed 5b c2 fa 	. [ . . 
 	call sub_f706h		;f5ab	cd 06 f7 	. . . 
-	ld (lfac2h),de		;f5ae	ed 53 c2 fa 	. S . . 
+	ld (D004_x_pos),de		;f5ae	ed 53 c2 fa 	. S . . 
 	ld (lf677h),hl		;f5b2	22 77 f6 	" w . 
 	xor 010h		;f5b5	ee 10 	. . 
 	ld (0f67ah),a		;f5b7	32 7a f6 	2 z . 
@@ -1471,9 +1474,9 @@ sub_f598h:
 	ex (sp),hl			;f5bc	e3 	. 
 	inc hl			;f5bd	23 	# 
 	inc hl			;f5be	23 	# 
-	ld de,(lfac4h)		;f5bf	ed 5b c4 fa 	. [ . . 
+	ld de,(D003_y_pos)		;f5bf	ed 5b c4 fa 	. [ . . 
 	call sub_f706h		;f5c3	cd 06 f7 	. . . 
-	ld (lfac4h),de		;f5c6	ed 53 c4 fa 	. S . . 
+	ld (D003_y_pos),de		;f5c6	ed 53 c4 fa 	. S . . 
 	ld (lf66eh),hl		;f5ca	22 6e f6 	" n . 
 	ld (0f671h),a		;f5cd	32 71 f6 	2 q . 
 	pop hl			;f5d0	e1 	. 
@@ -2222,12 +2225,10 @@ lfabeh:
 lfac0h:
 	nop			;fac0	00 	. 
 	nop			;fac1	00 	. 
-lfac2h:
-	nop			;fac2	00 	. 
-	nop			;fac3	00 	. 
-lfac4h:
-	nop			;fac4	00 	. 
-	nop			;fac5	00 	. 
+D004_x_pos:
+	defw 00000h		;fac2	0000 	.  
+D003_y_pos:
+	defw 00000h		;fac4	0000 	.  
 lfac6h:
 	nop			;fac6	00 	. 
 	ld e,e			;fac7	5b 	[ 
