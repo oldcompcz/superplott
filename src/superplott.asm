@@ -30,21 +30,21 @@ MV_FREE:
         ld a,028h               ;ec68   load 40 into a
         ld (0ecf4h),a           ;ec6a   modify of ld bc,0XX01h at ecf2
                                 ;       waiting interval?
-        
-                                ;Reading keyboard:
-                                ;-----------------------------------------
-                                ;port / bit ->              b0 b1 b2 b3 b4
-                                ;-----------------------------------------                            
-                                ;7FFE - 01111111 11111110 - sp ss  M  N  B
-                                ;BFFE - 10111111 11111110 - en  L  K  J  H
-                                ;DFFE - 11011111 11111110 -  P  O  I  U  Y
-                                ;EFFE - 11101111 11111110 -  0  9  8  7  6
-                                ;F7FE - 11110111 11111110 -  1  2  3  4  5
-                                ;FBFE - 11111011 11111110 -  Q  W  E  R  T
-                                ;FDFE - 11111101 11111110 -  A  S  D  F  G
-                                ;FEFE - 11111110 11111110 - sh  Z  X  C  V
-                                ;-----------------------------------------
-                                 
+
+; Reading keyboard:
+; -----------------------------------------
+; port / bit ->              b0 b1 b2 b3 b4
+; -----------------------------------------
+; 7FFE - 01111111 11111110 - sp ss  M  N  B
+; BFFE - 10111111 11111110 - en  L  K  J  H
+; DFFE - 11011111 11111110 -  P  O  I  U  Y
+; EFFE - 11101111 11111110 -  0  9  8  7  6
+; F7FE - 11110111 11111110 -  1  2  3  4  5
+; FBFE - 11111011 11111110 -  Q  W  E  R  T
+; FDFE - 11111101 11111110 -  A  S  D  F  G
+; FEFE - 11111110 11111110 - sh  Z  X  C  V
+; -----------------------------------------
+
         ld hl,D001_keyb_snap    ;ec6d   load v[0] into hl 
         ld bc,07ffeh            ;ec70   load bc with the keyboard row port 
 read_keys:
@@ -68,7 +68,9 @@ read_keys:
         bit 4,(ix+004h)         ;eca0   test of key 5 (left)
         call nz,mf_x_minus      ;eca4   move x-
         bit 0,(ix+003h)         ;eca7   test of key 0 (quit)
-        jr nz,mf_quit           ;ecab 
+        jr nz,mf_quit           ;ecab
+
+; Convert coordinates to decimal 
         ld ix,D002              ;ecad   addr for x in decimal 
         ld hl,(D004_x_pos)      ;ecb1   load x pos 
         call mf_cnv_to_decimal  ;ecb4   convert to decimal 
@@ -76,36 +78,38 @@ read_keys:
         ld hl,(D003_y_pos)      ;ecb9   load y pos 
         call mf_cnv_to_decimal  ;ecbc   convert to decimal 
         ld ix,D002              ;ecbf 
-        ld (ix-001h),0ffh       ;ecc3 
-lecc7h:
-        ld a,(ix+000h)          ;ecc7   dd 7e 00 	. ~ . 
-        inc ix                  ;ecca   dd 23 	. # 
-        cp 00bh                 ;eccc   fe 0b 	. . 
-        jr nc,lecf0h            ;ecce   30 20 	0   
-        add a,a                 ;ecd0   87 	. 
-        add a,a                 ;ecd1   87 	. 
-        add a,a                 ;ecd2   87 	. 
-        ld c,a                  ;ecd3   4f 	O 
-        ld b,000h               ;ecd4   06 00 	. . 
-        ld hl,03d80h            ;ecd6   21 80 3d 	! . = 
-        add hl,bc               ;ecd9   09 	. 
-        ld a,(0edabh)           ;ecda   3a ab ed 	: . . 
-        inc a                   ;ecdd   3c 	< 
-        ld (0edabh),a           ;ecde   32 ab ed 	2 . . 
-        ld de,050e0h            ;ece1   11 e0 50 	. . P 
-        add a,e                 ;ece4   83 	. 
-        ld e,a                  ;ece5   5f 	_ 
-        ld b,008h               ;ece6   06 08 	. . 
-lece8h:
-        ld a,(hl)               ;ece8   7e 	~ 
-        ld (de),a               ;ece9   12 	. 
-        inc hl                  ;ecea   23 	# 
-        inc d                   ;eceb   14 	. 
-        djnz lece8h             ;ecec   10 fa 	. . 
-        jr lecc7h               ;ecee   18 d7 	. .
+        ld (ix-001h),0ffh       ;ecc3
 
-; Wait?
-lecf0h:
+; Print coordinates at screen 
+lecc7h: 
+        ld a,(ix+000h)          ;ecc7   decimal digit into a 
+        inc ix                  ;ecca   increase base address 
+        cp 00bh                 ;eccc  
+        jr nc,mf_wait           ;ecce   loop if greater than 11   
+        add a,a                 ;ecd0   a = a * 8 (calc index of digit char) 
+        add a,a                 ;ecd1 
+        add a,a                 ;ecd2 
+        ld c,a                  ;ecd3 
+        ld b,000h               ;ecd4 
+        ld hl,03d80h            ;ecd6   base address 
+        add hl,bc               ;ecd9   add char index 
+        ld a,(D005)             ;ecda   load and increase char index at screen 
+        inc a                   ;ecdd 
+        ld (D005),a             ;ecde 
+        ld de,050e0h            ;ece1   video ram (4000-57FF) position 
+        add a,e                 ;ece4   add char position 
+        ld e,a                  ;ece5 
+        ld b,008h               ;ece6   char is composed by 8 bytes
+lece8h:
+        ld a,(hl)               ;ece8   load char byte 
+        ld (de),a               ;ece9   put it into video ram 
+        inc hl                  ;ecea   next char byte 
+        inc d                   ;eceb   calc video ram position 
+        djnz lece8h             ;ecec   loop until b = 0 
+        jr lecc7h               ;ecee   next char
+
+; Wait and loop
+mf_wait:
         pop ix                  ;ecf0 
         ld bc,00001h            ;ecf2   self modified by ec6a
 lecf5h:
@@ -132,8 +136,8 @@ mf_cnv_to_decimal:
         ret                     ;ed15 
 sub_ed16h:
         ld (ix+000h),000h       ;ed16 
-led1ah:                         ;     division by de
-        or a                    ;ed1a 
+led1ah:
+        or a                    ;ed1a   division by de
         sbc hl,de               ;ed1b 
         jp m,led25h             ;ed1d 
         inc (ix+000h)           ;ed20 
@@ -222,7 +226,8 @@ PUTY:
         dec b                   ;eda7	05 	. 
         jr c,ledc2h             ;eda8	38 18 	8 . 
         defb 0e2h               ;edaa	e2
-        nop                     ;edab   00
+
+D005:   defb 000h               ;edab   char index at screen
         
 D002:   defb 000h               ;edac   y in decimal
         defb 000h               ;edad
