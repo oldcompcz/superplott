@@ -9,7 +9,11 @@
 ; * z80dasm -a -t -l -g 60500 -b blocks.txt superplott.bin
 ; *****************************************************************************
 
-        org     0ec54h
+MAX_Y   equ 006d6h              ;1750
+MAX_X   equ 009c4h              ;2500
+
+
+        org 0ec54h
 
         jp 0ee48h               ;ec54   JP INIT
         jp PUTX                 ;ec57
@@ -19,8 +23,8 @@
         jp LIST                 ;ec63
 
 WHE_X:
-        defw 0faaah             ;ec66   aa fa
-        
+        defw D006_whe_x         ;ec66
+
 ; *****************************************************************************
 ; * Move Free - PRINT #4; "mf"
 ; *
@@ -151,17 +155,17 @@ led25h:
 mf_quit:
         pop ix                  ;ed29
         ld hl,D004_x_pos        ;ed2b
-        ld de,0faaah            ;ed2e
+        ld de,D006_whe_x        ;ed2e   copy 4 bytes hl -> de
         push de                 ;ed31
         call sub_f470h          ;ed32
-        pop hl                  ;ed35
-        jp sub_f470h            ;ed36
-
+        pop hl                  ;ed35   copy it again just after de
+        jp sub_f470h            ;ed36   copy 4 bytes hl -> de
+                                ;       sub_f470h will return from MF !!!
 
 ; Move free: quickly
 mf_quickly:
         xor a                   ;ed39   a = 0
-        ld (0ecf4h),a           ;ed3a   modify of ld bc,00001h at ecf2 
+        ld (0ecf4h),a           ;ed3a   modify of ld bc,0XX01h at ecf2 
         ret                     ;ed3d
 
 ; Move free: move y
@@ -170,7 +174,7 @@ mf_y_plus:
         ld hl,(D003_y_pos)      ;ed40 
         inc hl                  ;ed43 
         ld (D003_y_pos),hl      ;ed44 
-        ld de,006d6h            ;ed47	load MAX_Y = 1750 
+        ld de,MAX_Y             ;ed47	load MAX_Y = 1750 
         or a                    ;ed4a 
         sbc hl,de               ;ed4b 
         ret m                   ;ed4d 
@@ -189,7 +193,7 @@ mf_x_plus:
         ld hl,(D004_x_pos)      ;ed5e 
         inc hl                  ;ed61 
         ld (D004_x_pos),hl      ;ed62 
-        ld de,009c4h            ;ed65   load MAX_Y = 2500 
+        ld de,MAX_X             ;ed65   load MAX_X = 2500 
         or a                    ;ed68 
         sbc hl,de               ;ed69 
         ret m                   ;ed6b 
@@ -202,9 +206,9 @@ mf_x_minus:
         ret z                   ;ed77 
         jr mf_x_plus            ;ed78 
 PUTX:
-        ld hl,lfac6h            ;ed7a	21 c6 fa 	! . . 
-        ld (05c68h),hl          ;ed7d	22 68 5c 	" h \ 
-        ld de,(0faaah)          ;ed80	ed 5b aa fa 	. [ . . 
+        ld hl,D008              ;ed7a 
+        ld (05c68h),hl          ;ed7d   Address of area used for calculator's memory. 
+        ld de,(D006_whe_x)      ;ed80 
         call sub_ef98h          ;ed84	cd 98 ef 	. . . 
         rst 28h                 ;ed87	ef 	. 
         call pe,0eb03h          ;ed88	ec 03 eb 	. . . 
@@ -215,9 +219,9 @@ PUTX:
         or a                    ;ed94	b7 	. 
         ret                     ;ed95	c9 	. 
 PUTY:
-        ld hl,lfac6h            ;ed96	21 c6 fa 	! . . 
+        ld hl,D008            ;ed96	21 c6 fa 	! . . 
         ld (05c68h),hl          ;ed99	22 68 5c 	" h \ 
-        ld de,(lfaach)          ;ed9c	ed 5b ac fa 	. [ . . 
+        ld de,(D007_whe_y)          ;ed9c	ed 5b ac fa 	. [ . . 
         call sub_ef98h          ;eda0	cd 98 ef 	. . . 
         rst 28h                 ;eda3	ef 	. 
         defb 0edh               ;next byte illegal after ed		;eda4	ed 	. 
@@ -323,16 +327,16 @@ lee1dh:
 	jr nz,lee2ch		;ee28	20 02 	  . 
 	ld a,02ch		;ee2a	3e 2c 	> , 
 lee2ch:
-	ld hl,(lfac6h)		;ee2c	2a c6 fa 	* . . 
+	ld hl,(D008)		;ee2c	2a c6 fa 	* . . 
 	ld (hl),a			;ee2f	77 	w 
 	inc hl			;ee30	23 	# 
-	ld (lfac6h),hl		;ee31	22 c6 fa 	" . . 
+	ld (D008),hl		;ee31	22 c6 fa 	" . . 
 	ex af,af'			;ee34	08 	. 
 	ld a,h			;ee35	7c 	| 
 	cp 05ch		;ee36	fe 5c 	. \ 
 	jr c,lee40h		;ee38	38 06 	8 . 
 	dec h			;ee3a	25 	% 
-	ld (lfac6h),hl		;ee3b	22 c6 fa 	" . . 
+	ld (D008),hl		;ee3b	22 c6 fa 	" . . 
 	rst 8			;ee3e	cf 	. 
 	rrca			;ee3f	0f 	. 
 lee40h:
@@ -423,7 +427,7 @@ leeb7h:
 	ld hl,05b00h		;eec9	21 00 5b 	! . [ 
 	ld (05c5dh),hl		;eecc	22 5d 5c 	" ] \ 
 	ld (lfb2bh+1),hl		;eecf	22 2c fb 	" , . 
-	ld hl,lfac6h		;eed2	21 c6 fa 	! . . 
+	ld hl,D008		;eed2	21 c6 fa 	! . . 
 	ld (05c68h),hl		;eed5	22 68 5c 	" h \ 
 	xor a			;eed8	af 	. 
 	call sub_f721h		;eed9	cd 21 f7 	. ! . 
@@ -560,7 +564,9 @@ sub_ef8dh:
 	push hl			;ef90	e5 	. 
 	call sub_ef98h		;ef91	cd 98 ef 	. . . 
 	pop hl			;ef94	e1 	. 
-	call sub_eff7h		;ef95	cd f7 ef 	. . . 
+	call sub_eff7h		;ef95	cd f7 ef 	. . .
+
+; Calculator 
 sub_ef98h:
 	push de			;ef98	d5 	. 
 	rst 28h			;ef99	ef 	. 
@@ -583,7 +589,8 @@ lefa6h:
 	ld (hl),000h		;efad	36 00 	6 . 
 	inc hl			;efaf	23 	# 
 	ld (05c65h),hl		;efb0	22 65 5c 	" e \ 
-	ret			;efb3	c9 	. 
+	ret			;efb3	c9 	.
+ 
 sub_efb4h:
 	rst 28h			;efb4	ef 	. 
 	and d			;efb5	a2 	. 
@@ -617,7 +624,7 @@ lefd7h:
 	call sub_effch		;efd7	cd fc ef 	. . . 
 	call sub_f3ddh		;efda	cd dd f3 	. . . 
 lefddh:
-	ld hl,0faaah		;efdd	21 aa fa 	! . . 
+	ld hl,D006_whe_x		;efdd	21 aa fa 	! . . 
 	ld de,lfab2h		;efe0	11 b2 fa 	. . . 
 	ld bc,0000ch		;efe3	01 0c 00 	. . . 
 	ldir		;efe6	ed b0 	. . 
@@ -625,7 +632,7 @@ lefddh:
 lefe9h:
 	ld (lfa80h),a		;efe9	32 80 fa 	2 . . 
 	call sub_ef84h		;efec	cd 84 ef 	. . . 
-	ld hl,0faaah		;efef	21 aa fa 	! . . 
+	ld hl,D006_whe_x		;efef	21 aa fa 	! . . 
 	call sub_ef8dh		;eff2	cd 8d ef 	. . . 
 	jr lefd7h		;eff5	18 e0 	. . 
 sub_eff7h:
@@ -887,7 +894,7 @@ lf163h:
 	rst 0			;f1b2	c7 	. 
 	ld (bc),a			;f1b3	02 	. 
 	call pe,038edh		;f1b4	ec ed 38 	. . 8 
-	ld hl,0faaah		;f1b7	21 aa fa 	! . . 
+	ld hl,D006_whe_x		;f1b7	21 aa fa 	! . . 
 	call sub_ef8dh		;f1ba	cd 8d ef 	. . . 
 	rst 28h			;f1bd	ef 	. 
 	call 0cc02h		;f1be	cd 02 cc 	. . . 
@@ -1203,8 +1210,8 @@ sub_f3e9h:
 	jr z,lf46ah		;f3ed	28 7b 	( { 
 	cp 004h		;f3ef	fe 04 	. . 
 	jr z,lf451h		;f3f1	28 5e 	( ^ 
-	ld hl,0faaah		;f3f3	21 aa fa 	! . . 
-	ld de,lfac6h		;f3f6	11 c6 fa 	. . . 
+	ld hl,D006_whe_x		;f3f3	21 aa fa 	! . . 
+	ld de,D008		;f3f6	11 c6 fa 	. . . 
 	ld bc,00008h		;f3f9	01 08 00 	. . . 
 	ldir		;f3fc	ed b0 	. . 
 	ld (ix+009h),000h		;f3fe	dd 36 09 00 	. 6 . . 
@@ -1219,9 +1226,9 @@ sub_f3e9h:
 	ld a,(ix+00ah)		;f418	dd 7e 0a 	. ~ . 
 	push af			;f41b	f5 	. 
 	ld (ix+00ah),000h		;f41c	dd 36 0a 00 	. 6 . . 
-	ld hl,lfac6h		;f420	21 c6 fa 	! . . 
+	ld hl,D008		;f420	21 c6 fa 	! . . 
 	push hl			;f423	e5 	. 
-	ld hl,(lfac6h)		;f424	2a c6 fa 	* . . 
+	ld hl,(D008)		;f424	2a c6 fa 	* . . 
 	ld de,(D004_x_pos)		;f427	ed 5b c2 fa 	. [ . . 
 	and a			;f42b	a7 	. 
 	sbc hl,de		;f42c	ed 52 	. R 
@@ -1243,7 +1250,7 @@ sub_f3e9h:
 	jr c,lf46ah		;f44f	38 19 	8 . 
 lf451h:
 	ld hl,lfaaeh		;f451	21 ae fa 	! . . 
-	ld de,0faaah		;f454	11 aa fa 	. . . 
+	ld de,D006_whe_x		;f454	11 aa fa 	. . . 
 	call sub_f470h		;f457	cd 70 f4 	. p . 
 sub_f45ah:
 	ld a,(lfa7fh)		;f45a	3a 7f fa 	:  . 
@@ -1259,11 +1266,14 @@ sub_f45ah:
 lf46ah:
 	xor a			;f46a	af 	. 
 	call sub_f6d5h		;f46b	cd d5 f6 	. . . 
-	jr lf451h		;f46e	18 e1 	. . 
+	jr lf451h		;f46e	18 e1 	. .
+
+; Copy 4 bytes
 sub_f470h:
-	ld bc,00004h		;f470	01 04 00 	. . . 
-	ldir		;f473	ed b0 	. . 
-	ret			;f475	c9 	. 
+        ld bc,00004h            ;f470
+        ldir                    ;f473
+        ret                     ;f475
+
 sub_f476h:
 	ld (ix+008h),002h		;f476	dd 36 08 02 	. 6 . . 
 lf47ah:
@@ -1284,7 +1294,7 @@ lf480h:
 	dec (ix+007h)		;f48f	dd 35 07 	. 5 . 
 	jr nz,lf480h		;f492	20 ec 	  . 
 	push de			;f494	d5 	. 
-	ld hl,lfac6h		;f495	21 c6 fa 	! . . 
+	ld hl,D008		;f495	21 c6 fa 	! . . 
 	ld de,lfac8h		;f498	11 c8 fa 	. . . 
 	call sub_f062h		;f49b	cd 62 f0 	. b . 
 	ld c,004h		;f49e	0e 04 	. . 
@@ -1297,7 +1307,7 @@ lf480h:
 sub_f4abh:
 	ld (lfad8h),hl		;f4ab	22 d8 fa 	" . . 
 	ex de,hl			;f4ae	eb 	. 
-	ld hl,(lfac6h)		;f4af	2a c6 fa 	* . . 
+	ld hl,(D008)		;f4af	2a c6 fa 	* . . 
 	call sub_f52bh		;f4b2	cd 2b f5 	. + . 
 	ld c,h			;f4b5	4c 	L 
 	ld (lfaceh),a		;f4b6	32 ce fa 	2 . . 
@@ -1311,7 +1321,7 @@ sub_f4abh:
 	ld a,h			;f4c8	7c 	| 
 	or c			;f4c9	b1 	. 
 	ret p			;f4ca	f0 	. 
-	ld hl,lfac6h		;f4cb	21 c6 fa 	! . . 
+	ld hl,D008		;f4cb	21 c6 fa 	! . . 
 	ld de,lfacfh		;f4ce	11 cf fa 	. . . 
 	ld bc,00009h		;f4d1	01 09 00 	. . . 
 	ldir		;f4d4	ed b0 	. . 
@@ -1333,7 +1343,7 @@ lf4d6h:
 	jr nz,lf503h		;f4f7	20 0a 	  . 
 	ld a,(lfaceh)		;f4f9	3a ce fa 	: . . 
 	xor 0ffh		;f4fc	ee ff 	. . 
-	ld hl,lfac6h		;f4fe	21 c6 fa 	! . . 
+	ld hl,D008		;f4fe	21 c6 fa 	! . . 
 	jr lf50ah		;f501	18 07 	. . 
 lf503h:
 	ld a,(lfad7h)		;f503	3a d7 fa 	: . . 
@@ -1720,8 +1730,8 @@ sub_f721h:
 	ret z			;f73f	c8 	. 
 sub_f740h:
 	ld hl,00000h		;f740	21 00 00 	! . . 
-	ld (0faaah),hl		;f743	22 aa fa 	" . . 
-	ld (lfaach),hl		;f746	22 ac fa 	" . . 
+	ld (D006_whe_x),hl		;f743	22 aa fa 	" . . 
+	ld (D007_whe_y),hl		;f746	22 ac fa 	" . . 
 	ld (lfab2h),hl		;f749	22 b2 fa 	" . . 
 	ld (lfab4h),hl		;f74c	22 b4 fa 	" . . 
 	ld (lfab6h),hl		;f74f	22 b6 fa 	" . . 
@@ -1861,7 +1871,7 @@ sub_f85dh:
 	bit 1,(ix+018h)		;f85d	dd cb 18 4e 	. . . N 
 	ret z			;f861	c8 	. 
 	ld hl,lfabeh		;f862	21 be fa 	! . . 
-	ld de,0faaah		;f865	11 aa fa 	. . . 
+	ld de,D006_whe_x		;f865	11 aa fa 	. . . 
 	call sub_f470h		;f868	cd 70 f4 	. p . 
 	call sub_f884h		;f86b	cd 84 f8 	. . . 
 	ld (lfaaeh),hl		;f86e	22 ae fa 	" . . 
@@ -2195,11 +2205,15 @@ lfaa0h:
 	sub 006h		;faa4	d6 06 	. . 
 lfaa6h:
 	call nz,0d609h		;faa6	c4 09 d6 	. . . 
-	ld b,000h		;faa9	06 00 	. . 
-	nop			;faab	00 	. 
-lfaach:
-	nop			;faac	00 	. 
-	nop			;faad	00 	. 
+	defb 06                 ;faa9	06
+
+D006_whe_x:
+        defb 00                 ;faaa
+        defb 00                 ;faab
+D007_whe_y:
+        defb 00                 ;faac
+        defb 00                 ;faad
+
 lfaaeh:
 	nop			;faae	00 	. 
 	nop			;faaf	00 	. 
@@ -2229,14 +2243,15 @@ lfabeh:
 	nop			;fabf	00 	. 
 lfac0h:
 	nop			;fac0	00 	. 
-	nop			;fac1	00 	. 
+	nop			;fac1	00 	.
+ 
 D004_x_pos:
-	defw 00000h		;fac2	0000 	.  
+        defw 00000h             ;fac2
 D003_y_pos:
-	defw 00000h		;fac4	0000 	.  
-lfac6h:
-	nop			;fac6	00 	. 
-	ld e,e			;fac7	5b 	[ 
+        defw 00000h             ;fac4
+D008:
+        defw 00000h             ;fac6
+
 lfac8h:
 	nop			;fac8	00 	. 
 	nop			;fac9	00 	. 
