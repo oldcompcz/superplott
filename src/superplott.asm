@@ -1,17 +1,19 @@
 ; *****************************************************************************
 ; * Superplott for XY 4150 and ZX Spectrum
 ; *
-; * compile:
+; * compile: (use z80asm from z88dk project)
 ; * z80asm -b superplott.asm
 ; * appmake +zx -b superplott.bin --org 60500 -o superplott.tap
 ; *
 ; * disassembled: 
 ; * z80dasm -a -t -l -g 60500 -b blocks.txt superplott.bin
+; *
+; * diff:
+; * diff -y <(xxd superplott.bin) <(xxd superplott_orig.bin) > diff.txt
 ; *****************************************************************************
 
-MAX_Y   equ 006d6h              ;1750
 MAX_X   equ 009c4h              ;2500
-
+MAX_Y   equ 006d6h              ;1750
 
         org 0ec54h
 
@@ -368,7 +370,7 @@ lee40h:
 ; *****************************************************************************
  
 INIT:
-        ld hl,lee94h            ;ee48	21 94 ee 	! . . 
+        ld hl,STREAMS           ;ee48	21 94 ee 	! . . 
         ld de,05c1eh            ;ee4b   Addresses of channels attached to streams 
         ld bc,00006h            ;ee4e	01 06 00 	. . . 
         ldir                    ;ee51	ed b0 	. . 
@@ -418,11 +420,10 @@ lee89h:
 	ret			;ee93	c9 	.
          
 ; BLOCK 'STREAMS' (start 0xee94 end 0xee9a)
-STREAMS_start:
+STREAMS:
 	defw 08fa9h		;ee94	a9 8f 	. . 
 	defw 08fach		;ee96	ac 8f 	. . 
 	defw 08fafh		;ee98	af 8f 	. . 
-STREAMS_end:
  
 ; *****************************************************************************
 ; * ENTRY
@@ -2282,7 +2283,7 @@ D004_x_pos:
 D003_y_pos:
         defw 00000h             ;fac4
 D008:
-        defw 00000h             ;fac6
+        defw 05b00h             ;fac6
 
 lfac8h:
 	nop			;fac8	00 	. 
