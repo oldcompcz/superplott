@@ -9,4 +9,6 @@ WHE_X:	 start 0xEC66 end 0xEC68 type worddata
 D001:	 start 0xEDB6 end 0xEDBF type bytedata
 TMP01:   start 0xee47 end 0xee48 type bytedata
 STREAMS: start 0xee94 end 0xee9a type worddata
+CAL01:   start 0xed88 end 0xed8d type bytedata
+CAL02:   start 0xeda4 end 0xeda9 type bytedata
 

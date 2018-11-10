@@ -6,7 +6,7 @@
 ; * $ appmake +zx -b superplott.bin --org 60500 -o superplott.tap
 ; *
 ; * verification against original binary:
-; * $ diff -y <(xxd superplott.bin) <(xxd ../bin/superplott.bin);
+; * $ diff -y <(xxd superplott.bin) <(xxd ../bin/superplott.bin)
 ; *
 ; * disassembled: 
 ; * $ z80dasm -a -t -l -g 60500 -b blocks.txt superplott.bin
@@ -220,14 +220,19 @@ PUTX:
         ld (05c68h),hl          ;ed7d   Address of area used for calculator's memory. 
         ld de,(D006_whe_x)      ;ed80
         call sub_ef98h          ;ed84
-        rst 28h                 ;ed87   https://faqwiki.zxnet.co.uk/wiki/X80
-        call pe,0eb03h          ;ed88	ec 03 eb 	. . . 
-        dec b                   ;ed8b	05 	. 
-        jr c,$-29               ;ed8c	38 e1 	8 . 
-        ld hl,05c92h            ;ed8e	21 92 5c 	! . \ 
-        ld (05c68h),hl          ;ed91	22 68 5c 	" h \ 
-        or a                    ;ed94	b7 	. 
-        ret                     ;ed95	c9 	.
+        rst 28h                 ;ed87
+
+        defb 0ech               ;ed88   get |m|
+        defb 003h               ;ed89   subtract |f|-|m|
+        defb 0ebh               ;ed8a   get |f|
+        defb 005h               ;ed8b   divide f/m
+        defb 038h               ;ed8c   end-calc
+led8dh:
+        pop hl                  ;ed8d
+        ld hl,05c92h            ;ed8e
+        ld (05c68h),hl          ;ed91
+        or a                    ;ed94
+        ret                     ;ed95
 
 ; *****************************************************************************
 ; * PUTY
@@ -240,16 +245,18 @@ PUTY:
         ld (05c68h),hl          ;ed99   Address of area used for calculator's memory.
         ld de,(D007_whe_y)      ;ed9c
         call sub_ef98h          ;eda0
-        rst 28h                 ;eda3   https://faqwiki.zxnet.co.uk/wiki/X80
-        defb 0edh               ;next byte illegal after ed		;eda4	ed 	. 
-        inc bc                  ;eda5	03 	. 
-        ex de,hl                ;eda6	eb 	. 
-        dec b                   ;eda7	05 	. 
-        jr c,ledc2h             ;eda8	38 18 	8 . 
-        defb 0e2h               ;edaa	e2
+        rst 28h                 ;eda3
+
+        defb 0edh               ;eda4   get COS 8 (???)
+        defb 003h               ;eda5   subtract |f|-|m|
+        defb 0ebh               ;eda6   get |f|
+        defb 005h               ;eda7   divide f/m
+        defb 038h               ;eda8   end-calc
+
+        jr led8dh               ;eda9
 
 D005:   defb 000h               ;edab   char index at screen
-        
+
 D002:   defb 000h               ;edac   y in decimal
         defb 000h               ;edad
         defb 000h               ;edae
