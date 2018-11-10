@@ -1,15 +1,15 @@
 ; *****************************************************************************
-; * Superplott for XY 4150 and ZX Spectrum
+; * Superplott for XY4150 and ZX Spectrum
 ; *
-; * compile: (use z80asm from z88dk project)
-; * z80asm -b superplott.asm
-; * appmake +zx -b superplott.bin --org 60500 -o superplott.tap
+; * how to build: (use z80asm from z88dk project)
+; * $ z80asm -b superplott.asm
+; * $ appmake +zx -b superplott.bin --org 60500 -o superplott.tap
+; *
+; * verification against original binary:
+; * $ diff -y <(xxd superplott.bin) <(xxd ../bin/superplott.bin);
 ; *
 ; * disassembled: 
-; * z80dasm -a -t -l -g 60500 -b blocks.txt superplott.bin
-; *
-; * diff:
-; * diff -y <(xxd superplott.bin) <(xxd superplott_orig.bin) > diff.txt
+; * $ z80dasm -a -t -l -g 60500 -b blocks.txt superplott.bin
 ; *****************************************************************************
 
 MAX_X   equ 009c4h              ;2500
@@ -216,11 +216,11 @@ mf_x_minus:
 ; *****************************************************************************
  
 PUTX:
-        ld hl,D008              ;ed7a 
+        ld hl,D008              ;ed7a
         ld (05c68h),hl          ;ed7d   Address of area used for calculator's memory. 
-        ld de,(D006_whe_x)      ;ed80 
-        call sub_ef98h          ;ed84	cd 98 ef 	. . . 
-        rst 28h                 ;ed87	ef 	. 
+        ld de,(D006_whe_x)      ;ed80
+        call sub_ef98h          ;ed84
+        rst 28h                 ;ed87   https://faqwiki.zxnet.co.uk/wiki/X80
         call pe,0eb03h          ;ed88	ec 03 eb 	. . . 
         dec b                   ;ed8b	05 	. 
         jr c,$-29               ;ed8c	38 e1 	8 . 
@@ -236,11 +236,11 @@ PUTX:
 ; *****************************************************************************
  
 PUTY:
-        ld hl,D008            ;ed96	21 c6 fa 	! . . 
-        ld (05c68h),hl          ;ed99	22 68 5c 	" h \ 
-        ld de,(D007_whe_y)          ;ed9c	ed 5b ac fa 	. [ . . 
-        call sub_ef98h          ;eda0	cd 98 ef 	. . . 
-        rst 28h                 ;eda3	ef 	. 
+        ld hl,D008              ;ed96
+        ld (05c68h),hl          ;ed99   Address of area used for calculator's memory.
+        ld de,(D007_whe_y)      ;ed9c
+        call sub_ef98h          ;eda0
+        rst 28h                 ;eda3   https://faqwiki.zxnet.co.uk/wiki/X80
         defb 0edh               ;next byte illegal after ed		;eda4	ed 	. 
         inc bc                  ;eda5	03 	. 
         ex de,hl                ;eda6	eb 	. 
