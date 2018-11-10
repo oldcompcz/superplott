@@ -15,7 +15,7 @@ MAX_X   equ 009c4h              ;2500
 
         org 0ec54h
 
-        jp 0ee48h               ;ec54   JP INIT
+        jp INIT                 ;ec54
         jp PUTX                 ;ec57
         jp PUTY                 ;ec5a
         jp ENTRY                ;ec5d
@@ -30,6 +30,7 @@ WHE_X:
 ; *
 ; * Reads cursor (5,6,7,8), 0 = quit, q = run fast
 ; *****************************************************************************
+
 MV_FREE:
         ld a,028h               ;ec68   load 40 into a
         ld (0ecf4h),a           ;ec6a   modify of ld bc,0XX01h at ecf2
@@ -124,7 +125,7 @@ lecf5h:
         jp MV_FREE              ;ecfa
 
 ; *****************************************************************************
-; * Move Free - END
+; * Move Free - main loop end
 ; *****************************************************************************
 
 ; Convert hl to decimal and write result to (ix)
@@ -204,7 +205,14 @@ mf_x_minus:
         ld (D004_x_pos),hl      ;ed72 
         bit 7,h                 ;ed75 
         ret z                   ;ed77 
-        jr mf_x_plus            ;ed78 
+        jr mf_x_plus            ;ed78
+
+; *****************************************************************************
+; * PUTX
+; * Transfer of variable containing pen X position   
+; * Through top of stack in floating point form
+; *****************************************************************************
+ 
 PUTX:
         ld hl,D008              ;ed7a 
         ld (05c68h),hl          ;ed7d   Address of area used for calculator's memory. 
@@ -217,7 +225,14 @@ PUTX:
         ld hl,05c92h            ;ed8e	21 92 5c 	! . \ 
         ld (05c68h),hl          ;ed91	22 68 5c 	" h \ 
         or a                    ;ed94	b7 	. 
-        ret                     ;ed95	c9 	. 
+        ret                     ;ed95	c9 	.
+
+; *****************************************************************************
+; * PUTY
+; * Transfer of variable containing pen Y position   
+; * Through top of stack in floating point form
+; *****************************************************************************
+ 
 PUTY:
         ld hl,D008            ;ed96	21 c6 fa 	! . . 
         ld (05c68h),hl          ;ed99	22 68 5c 	" h \ 
@@ -343,28 +358,37 @@ lee40h:
 	ex af,af'			;ee40	08 	. 
 	cp 00dh		;ee41	fe 0d 	. . 
 	jp nz,leefeh		;ee43	c2 fe ee 	. . . 
-	ld ix,09421h		;ee46	dd 21 21 94 	. ! ! . 
-	xor 011h		;ee4a	ee 11 	. . 
-	ld e,05ch		;ee4c	1e 5c 	. \ 
-	ld bc,00006h		;ee4e	01 06 00 	. . . 
-	ldir		;ee51	ed b0 	. . 
-	out (0fbh),a		;ee53	d3 fb 	. . 
-	out (0bfh),a		;ee55	d3 bf 	. . 
+	defb 0ddh		;ee46	dd 	. 
+	defb 021h		;ee47	21 	!
+
+; *****************************************************************************
+; * INIT
+; * Superplott Initialization
+; *
+; *****************************************************************************
+ 
+INIT:
+        ld hl,lee94h            ;ee48	21 94 ee 	! . . 
+        ld de,05c1eh            ;ee4b   Addresses of channels attached to streams 
+        ld bc,00006h            ;ee4e	01 06 00 	. . . 
+        ldir                    ;ee51	ed b0 	. . 
+        out (0fbh),a            ;ee53	d3 fb 	. . 
+        out (0bfh),a            ;ee55	d3 bf 	. . 
 lee57h:
-	call sub_ee86h		;ee57	cd 86 ee 	. . . 
-	ret c			;ee5a	d8 	. 
-	ld hl,007d0h		;ee5b	21 d0 07 	! . . 
+        call sub_ee86h          ;ee57	cd 86 ee 	. . . 
+        ret c                   ;ee5a	d8 	. 
+        ld hl,007d0h            ;ee5b	21 d0 07 	! . . 
 lee5eh:
-	out (0dfh),a		;ee5e	d3 df 	. . 
+        out (0dfh),a            ;ee5e	d3 df 	. . 
 lee60h:
-	djnz lee60h		;ee60	10 fe 	. . 
-	call sub_ee86h		;ee62	cd 86 ee 	. . . 
-	jr c,lee6dh		;ee65	38 06 	8 . 
-	dec hl			;ee67	2b 	+ 
-	ld a,h			;ee68	7c 	| 
-	or l			;ee69	b5 	. 
-	jr nz,lee5eh		;ee6a	20 f2 	  . 
-	ret			;ee6c	c9 	. 
+        djnz lee60h             ;ee60	10 fe 	. . 
+        call sub_ee86h          ;ee62	cd 86 ee 	. . . 
+        jr c,lee6dh             ;ee65	38 06 	8 . 
+        dec hl                  ;ee67	2b 	+ 
+        ld a,h                  ;ee68	7c 	| 
+        or l                    ;ee69	b5 	. 
+        jr nz,lee5eh            ;ee6a	20 f2 	  . 
+        ret                     ;ee6c	c9 	. 
 lee6dh:
 	ld c,00fh		;ee6d	0e 0f 	. . 
 	xor a			;ee6f	af 	. 
@@ -391,13 +415,21 @@ lee89h:
 	djnz lee89h		;ee8f	10 f8 	. . 
 	ld a,c			;ee91	79 	y 
 	rlca			;ee92	07 	. 
-	ret			;ee93	c9 	. 
-	xor c			;ee94	a9 	. 
-	adc a,a			;ee95	8f 	. 
-	xor h			;ee96	ac 	. 
-	adc a,a			;ee97	8f 	. 
-	xor a			;ee98	af 	. 
-	adc a,a			;ee99	8f 	. 
+	ret			;ee93	c9 	.
+         
+; BLOCK 'STREAMS' (start 0xee94 end 0xee9a)
+STREAMS_start:
+	defw 08fa9h		;ee94	a9 8f 	. . 
+	defw 08fach		;ee96	ac 8f 	. . 
+	defw 08fafh		;ee98	af 8f 	. . 
+STREAMS_end:
+ 
+; *****************************************************************************
+; * ENTRY
+; * Entry of graphical commands in form of strings 
+; * Through #4 - char is in a register
+; *****************************************************************************
+ 
 ENTRY:
 	call sub_fa67h		;ee9a	cd 67 fa 	. g . 
 	cp 006h		;ee9d	fe 06 	. . 

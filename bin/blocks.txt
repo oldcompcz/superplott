@@ -5,7 +5,8 @@
 ;test_code:	start 0x0300 end 0x0500 type code
 ;test_pointers: start 0x0400 end 0x0410 type pointers
 
-WHE_X:	start 0xEC66 end 0xEC68 type worddata
-D001:	start 0xEDB6 end 0xEDBF type bytedata
-
+WHE_X:	 start 0xEC66 end 0xEC68 type worddata
+D001:	 start 0xEDB6 end 0xEDBF type bytedata
+TMP01:   start 0xee47 end 0xee48 type bytedata
+STREAMS: start 0xee94 end 0xee9a type worddata
 
