@@ -12,8 +12,16 @@
 ; * $ z80dasm -a -t -l -g 60500 -b blocks.txt superplott.bin
 ; *****************************************************************************
 
-MAX_X   equ 009c4h              ;2500
-MAX_Y   equ 006d6h              ;1750
+MAX_X           equ 2500
+MAX_Y           equ 1750
+
+PORT_XP         equ 0c7h        ;out port x+            11000111
+PORT_XM         equ 0cfh        ;out port x-            11001111
+PORT_YP         equ 0d7h        ;out port y+            11010111
+PORT_YM         equ 0dfh        ;out port y-            11011111
+PORT_LED        equ 0bfh        ;out/in port led        10111111
+PORT_LED_RESET  equ 0fbh        ;out port led reset     11111011
+
 
         org 0ec54h
 
@@ -173,7 +181,7 @@ mf_quickly:
 
 ; Move free: move y
 mf_y_plus:
-        out (0d7h),a            ;ed3e   move y 
+        out (PORT_YP),a         ;ed3e   move y 
         ld hl,(D003_y_pos)      ;ed40 
         inc hl                  ;ed43 
         ld (D003_y_pos),hl      ;ed44 
@@ -182,7 +190,7 @@ mf_y_plus:
         sbc hl,de               ;ed4b 
         ret m                   ;ed4d 
 mf_y_minus:
-        out (0dfh),a            ;ed4e 
+        out (PORT_YM),a         ;ed4e 
         ld hl,(D003_y_pos)      ;ed50 
         dec hl                  ;ed53 
         ld (D003_y_pos),hl      ;ed54 
@@ -192,7 +200,7 @@ mf_y_minus:
         
 ; Move free: move x
 mf_x_plus:
-        out (0c7h),a            ;ed5c   move x 
+        out (PORT_XP),a         ;ed5c   move x 
         ld hl,(D004_x_pos)      ;ed5e 
         inc hl                  ;ed61 
         ld (D004_x_pos),hl      ;ed62 
@@ -201,7 +209,7 @@ mf_x_plus:
         sbc hl,de               ;ed69 
         ret m                   ;ed6b 
 mf_x_minus:
-        out (0cfh),a            ;ed6c 
+        out (PORT_XM),a         ;ed6c 
         ld hl,(D004_x_pos)      ;ed6e 
         dec hl                  ;ed71 
         ld (D004_x_pos),hl      ;ed72 
@@ -377,55 +385,57 @@ lee40h:
 ; *****************************************************************************
  
 INIT:
-        ld hl,STREAMS           ;ee48	21 94 ee 	! . . 
+        ld hl,STREAMS           ;ee48   STRMS_04..STRMS_06 
         ld de,05c1eh            ;ee4b   Addresses of channels attached to streams 
-        ld bc,00006h            ;ee4e	01 06 00 	. . . 
-        ldir                    ;ee51	ed b0 	. . 
-        out (0fbh),a            ;ee53	d3 fb 	. . 
-        out (0bfh),a            ;ee55	d3 bf 	. . 
+        ld bc,00006h            ;ee4e 
+        ldir                    ;ee51   copy SSTMS 
+        out (PORT_LED_RESET),a  ;ee53 
+        out (PORT_LED),a        ;ee55   set led 
 lee57h:
-        call sub_ee86h          ;ee57	cd 86 ee 	. . . 
-        ret c                   ;ee5a	d8 	. 
-        ld hl,007d0h            ;ee5b	21 d0 07 	! . . 
+        call sub_ee86h          ;ee57   test if led lights 
+        ret c                   ;ee5a	return if led lights 
+        ld hl,007d0h            ;ee5b   counter = 2000
 lee5eh:
-        out (0dfh),a            ;ee5e	d3 df 	. . 
+        out (PORT_YM),a         ;ee5e	move y- 
 lee60h:
-        djnz lee60h             ;ee60	10 fe 	. . 
-        call sub_ee86h          ;ee62	cd 86 ee 	. . . 
-        jr c,lee6dh             ;ee65	38 06 	8 . 
-        dec hl                  ;ee67	2b 	+ 
-        ld a,h                  ;ee68	7c 	| 
-        or l                    ;ee69	b5 	. 
-        jr nz,lee5eh            ;ee6a	20 f2 	  . 
-        ret                     ;ee6c	c9 	. 
+        djnz lee60h             ;ee60	waiting loop 256 x 
+        call sub_ee86h          ;ee62	test if led lights 
+        jr c,lee6dh             ;ee65   jump if led lights 
+        dec hl                  ;ee67   dec counter 
+        ld a,h                  ;ee68
+        or l                    ;ee69
+        jr nz,lee5eh            ;ee6a   loop if counter <> 0 
+        ret                     ;ee6c   return after 2000 steps with no success 
 lee6dh:
-	ld c,00fh		;ee6d	0e 0f 	. . 
-	xor a			;ee6f	af 	. 
-	call sub_f6d5h		;ee70	cd d5 f6 	. . . 
+        ld c,00fh               ;ee6d   move 16x y+
+        xor a                   ;ee6f   reset a
+        call sub_f6d5h          ;ee70   ???
 lee73h:
-	out (0d7h),a		;ee73	d3 d7 	. . 
+        out (PORT_YP),a         ;ee73   move y+
 lee75h:
-	ex (sp),hl			;ee75	e3 	. 
-	ex (sp),hl			;ee76	e3 	. 
-	djnz lee75h		;ee77	10 fc 	. . 
-	dec c			;ee79	0d 	. 
-	jr nz,lee73h		;ee7a	20 f7 	  . 
-	ld hl,00000h		;ee7c	21 00 00 	! . . 
-	ld (D004_x_pos),hl		;ee7f	22 c2 fa 	" . . 
-	ld (D003_y_pos),hl		;ee82	22 c4 fa 	" . . 
-	ret			;ee85	c9 	. 
+        ex (sp),hl              ;ee75   waiting loop
+        ex (sp),hl              ;ee76
+        djnz lee75h             ;ee77
+        dec c                   ;ee79   
+        jr nz,lee73h            ;ee7a   move y+ loop
+        ld hl,00000h            ;ee7c   
+        ld (D004_x_pos),hl      ;ee7f   reset position variables
+        ld (D003_y_pos),hl      ;ee82   reset position variables
+        ret                     ;ee85
+ 
+; Test led
 sub_ee86h:
-	ld bc,00000h		;ee86	01 00 00 	. . . 
+        ld bc,00000h            ;ee86   set counter to 0
 lee89h:
-	in a,(0bfh)		;ee89	db bf 	. . 
-	or c			;ee8b	b1 	. 
-	ld c,a			;ee8c	4f 	O 
-	out (0bfh),a		;ee8d	d3 bf 	. . 
-	djnz lee89h		;ee8f	10 f8 	. . 
-	ld a,c			;ee91	79 	y 
-	rlca			;ee92	07 	. 
-	ret			;ee93	c9 	.
-         
+        in a,(PORT_LED)         ;ee89   read led
+        or c                    ;ee8b   clear flags
+        ld c,a                  ;ee8c   save result
+        out (PORT_LED),a        ;ee8d
+        djnz lee89h             ;ee8f   try it 256 x 
+        ld a,c                  ;ee91   restore result 
+        rlca                    ;ee92   rotate left and use carry
+        ret                     ;ee93
+
 ; BLOCK 'STREAMS' (start 0xee94 end 0xee9a)
 STREAMS:
 	defw 08fa9h		;ee94	a9 8f 	. . 
@@ -1703,24 +1713,27 @@ lf6cbh:
 	ld a,0c9h		;f6cb	3e c9 	> . 
 	call sub_f6b6h		;f6cd	cd b6 f6 	. . . 
 	ld (ix+017h),000h		;f6d0	dd 36 17 00 	. 6 . . 
-	ld a,e			;f6d4	7b 	{ 
+	ld a,e			;f6d4	7b 	{
+
+; ???
 sub_f6d5h:
-	cp (ix+00bh)		;f6d5	dd be 0b 	. . . 
-	ld (lfa81h),a		;f6d8	32 81 fa 	2 . . 
-	ret z			;f6db	c8 	. 
-	jr c,lf6e2h		;f6dc	38 04 	8 . 
-	out (0fdh),a		;f6de	d3 fd 	. . 
-	jr lf6e4h		;f6e0	18 02 	. . 
+        cp (ix+00bh)            ;f6d5
+        ld (lfa81h),a           ;f6d8
+        ret z                   ;f6db
+        jr c,lf6e2h             ;f6dc
+        out (0fdh),a            ;f6de   ???  11111101
+        jr lf6e4h               ;f6e0
 lf6e2h:
-	out (0fbh),a		;f6e2	d3 fb 	. . 
+        out (PORT_LED_RESET),a  ;f6e2
 lf6e4h:
-	ld hl,00900h		;f6e4	21 00 09 	! . . 
+        ld hl,00900h            ;f6e4   set counter 2304
 lf6e7h:
-	dec hl			;f6e7	2b 	+ 
-	ld a,l			;f6e8	7d 	} 
-	or h			;f6e9	b4 	. 
-	jr nz,lf6e7h		;f6ea	20 fb 	  . 
-	ret			;f6ec	c9 	. 
+        dec hl                  ;f6e7
+        ld a,l                  ;f6e8
+        or h                    ;f6e9
+        jr nz,lf6e7h            ;f6ea   waiting loop
+        ret                     ;f6ec
+
 lf6edh:
 	ld a,(lfb12h)		;f6ed	3a 12 fb 	: . . 
 	or a			;f6f0	b7 	. 
@@ -1785,7 +1798,14 @@ sub_f740h:
 	ld (lfa8fh),a		;f766	32 8f fa 	2 . . 
 	call sub_f9c9h		;f769	cd c9 f9 	. . . 
 	ld (ix+015h),03eh		;f76c	dd 36 15 3e 	. 6 . > 
-	jp lf21dh		;f770	c3 1d f2 	. . . 
+	jp lf21dh		;f770	c3 1d f2 	. . .
+
+; *****************************************************************************
+; * LIST
+; * Print of character to printer
+; * Through #6
+; *****************************************************************************
+
 LIST:
 	call sub_fa67h		;f773	cd 67 fa 	. g . 
 	ld ix,lfa76h		;f776	dd 21 76 fa 	. ! v . 
@@ -1814,7 +1834,14 @@ lf799h:
 	pop af			;f7a5	f1 	. 
 lf7a6h:
 	call sub_f7bfh		;f7a6	cd bf f7 	. . . 
-	jp lef75h		;f7a9	c3 75 ef 	. u . 
+	jp lef75h		;f7a9	c3 75 ef 	. u .
+
+; *****************************************************************************
+; * WRITE
+; * Print of character
+; * Through #5
+; *****************************************************************************
+
 WRITE:
 	call sub_fa67h		;f7ac	cd 67 fa 	. g . 
 	ld ix,lfa76h		;f7af	dd 21 76 fa 	. ! v . 
