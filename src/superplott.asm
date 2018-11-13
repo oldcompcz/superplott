@@ -14,6 +14,7 @@
 
 MAX_X           equ 2500
 MAX_Y           equ 1750
+MAX_Y_INIT      equ 2000
 
 PORT_XP         equ 0c7h        ;out port x+            11000111
 PORT_XM         equ 0cfh        ;out port x-            11001111
@@ -66,7 +67,7 @@ read_keys:
         in a,(c)                ;ec73   read value from keyboard port 
         cpl                     ;ec75   complement - invert all bits in a
         and 01fh                ;ec76   mask out keys 0001 1111 
-        ld (hl),a               ;ec78   store v[0] 
+        ld (hl),a               ;ec78   store D001_keyb_snap[0] 
         inc hl                  ;ec79   inc of base address 
         rrc b                   ;ec7a   calc next row port addr 
         jr c,read_keys          ;ec7c   8-times loop (b = 0111 1111) 
@@ -228,7 +229,7 @@ PUTX:
         ld (05c68h),hl          ;ed7d   Address of area used for calculator's memory. 
         ld de,(D006_whe_x)      ;ed80
         call sub_ef98h          ;ed84
-        rst 28h                 ;ed87
+        rst 28h                 ;ed87   call fp calculator
 
         defb 0ech               ;ed88   get |m|
         defb 003h               ;ed89   subtract |f|-|m|
@@ -253,9 +254,9 @@ PUTY:
         ld (05c68h),hl          ;ed99   Address of area used for calculator's memory.
         ld de,(D007_whe_y)      ;ed9c
         call sub_ef98h          ;eda0
-        rst 28h                 ;eda3
+        rst 28h                 ;eda3   call fp calculator
 
-        defb 0edh               ;eda4   get COS 8 (???)
+        defb 0edh               ;eda4   get COS 8 (??? cannot read it from doc)
         defb 003h               ;eda5   subtract |f|-|m|
         defb 0ebh               ;eda6   get |f|
         defb 005h               ;eda7   divide f/m
@@ -388,13 +389,13 @@ INIT:
         ld hl,STREAMS           ;ee48   STRMS_04..STRMS_06 
         ld de,05c1eh            ;ee4b   Addresses of channels attached to streams 
         ld bc,00006h            ;ee4e 
-        ldir                    ;ee51   copy SSTMS 
+        ldir                    ;ee51   copy STRMS 
         out (PORT_LED_RESET),a  ;ee53 
         out (PORT_LED),a        ;ee55   set led 
 lee57h:
         call sub_ee86h          ;ee57   test if led lights 
         ret c                   ;ee5a	return if led lights 
-        ld hl,007d0h            ;ee5b   counter = 2000
+        ld hl,MAX_Y_INIT        ;ee5b   counter = 2000
 lee5eh:
         out (PORT_YM),a         ;ee5e	move y- 
 lee60h:
@@ -433,15 +434,15 @@ lee89h:
         out (PORT_LED),a        ;ee8d
         djnz lee89h             ;ee8f   try it 256 x 
         ld a,c                  ;ee91   restore result 
-        rlca                    ;ee92   rotate left and use carry
+        rlca                    ;ee92   rotate left with carry
         ret                     ;ee93
 
 ; BLOCK 'STREAMS' (start 0xee94 end 0xee9a)
 STREAMS:
-	defw 08fa9h		;ee94	a9 8f 	. . 
-	defw 08fach		;ee96	ac 8f 	. . 
-	defw 08fafh		;ee98	af 8f 	. . 
- 
+        defw 08fa9h             ;ee94   channel #4
+        defw 08fach             ;ee96   channel #5
+        defw 08fafh             ;ee98   channel #6
+
 ; *****************************************************************************
 ; * ENTRY
 ; * Entry of graphical commands in form of strings 
@@ -449,81 +450,81 @@ STREAMS:
 ; *****************************************************************************
  
 ENTRY:
-	call sub_fa67h		;ee9a	cd 67 fa 	. g . 
-	cp 006h		;ee9d	fe 06 	. . 
-	jr nz,leea3h		;ee9f	20 02 	  . 
-	ld a,02ch		;eea1	3e 2c 	> , 
+        call sub_fa67h          ;ee9a   Save all registers into stack
+        cp 006h                 ;ee9d   cp 6 (ACK)
+        jr nz,leea3h            ;ee9f
+        ld a,02ch               ;eea1   a = 44 (,)
 leea3h:
-	ld hl,(lfb2bh+1)		;eea3	2a 2c fb 	* , . 
-	ld (hl),a			;eea6	77 	w 
-	inc hl			;eea7	23 	# 
-	ld (lfb2bh+1),hl		;eea8	22 2c fb 	" , . 
-	ex af,af'			;eeab	08 	. 
-	ld a,h			;eeac	7c 	| 
-	cp 05ch		;eead	fe 5c 	. \ 
-	jr c,leeb7h		;eeaf	38 06 	8 . 
-	dec h			;eeb1	25 	% 
-	ld (lfb2bh+1),hl		;eeb2	22 2c fb 	" , . 
-	rst 8			;eeb5	cf 	. 
-	rrca			;eeb6	0f 	. 
+        ld hl,(D009+1)          ;eea3   some pointer 
+        ld (hl),a               ;eea6
+        inc hl                  ;eea7
+        ld (D009+1),hl          ;eea8
+        ex af,af'               ;eeab
+        ld a,h                  ;eeac 
+        cp 05ch                 ;eead   cp 92 (\) 
+        jr c,leeb7h             ;eeaf 
+        dec h                   ;eeb1
+        ld (D009+1),hl          ;eeb2
+        rst 8                   ;eeb5   Error Restart 
+        rrca                    ;eeb6
 leeb7h:
-	ex af,af'			;eeb7	08 	. 
-	cp 00dh		;eeb8	fe 0d 	. . 
-	jp nz,lef75h		;eeba	c2 75 ef 	. u . 
-	ld ix,lfa76h		;eebd	dd 21 76 fa 	. ! v . 
-	ld (ix+000h),000h		;eec1	dd 36 00 00 	. 6 . . 
-	ld hl,(05c5dh)		;eec5	2a 5d 5c 	* ] \ 
-	push hl			;eec8	e5 	. 
-	ld hl,05b00h		;eec9	21 00 5b 	! . [ 
-	ld (05c5dh),hl		;eecc	22 5d 5c 	" ] \ 
-	ld (lfb2bh+1),hl		;eecf	22 2c fb 	" , . 
-	ld hl,D008		;eed2	21 c6 fa 	! . . 
-	ld (05c68h),hl		;eed5	22 68 5c 	" h \ 
-	xor a			;eed8	af 	. 
-	call sub_f721h		;eed9	cd 21 f7 	. ! . 
+        ex af,af'               ;eeb7 
+        cp 00dh                 ;eeb8   cp 13 (ENTER) 
+        jp nz,lef75h            ;eeba   Restore all registers and return !!!
+        ld ix,lfa76h            ;eebd
+        ld (ix+000h),000h       ;eec1
+        ld hl,(05c5dh)          ;eec5   Address of the next character to be interpreted
+        push hl                 ;eec8
+        ld hl,05b00h            ;eec9	21 00 5b 	! . [ 
+        ld (05c5dh),hl          ;eecc	22 5d 5c 	" ] \ 
+        ld (D009+1),hl          ;eecf	22 2c fb 	" , . 
+        ld hl,D008              ;eed2	21 c6 fa 	! . . 
+        ld (05c68h),hl          ;eed5	22 68 5c 	" h \ 
+        xor a                   ;eed8	af 	. 
+        call sub_f721h          ;eed9	cd 21 f7 	. ! . 
 leedch:
-	call sub_f811h		;eedc	cd 11 f8 	. . . 
-	xor a			;eedf	af 	. 
-	ld (lef36h),a		;eee0	32 36 ef 	2 6 . 
-	call sub_ef0eh		;eee3	cd 0e ef 	. . . 
-	cp 00dh		;eee6	fe 0d 	. . 
-	jr z,lef61h		;eee8	28 77 	( w 
-	cp 03ah		;eeea	fe 3a 	. : 
-	jr z,leedch		;eeec	28 ee 	( . 
-	cp 03bh		;eeee	fe 3b 	. ; 
-	jr z,leedch		;eef0	28 ea 	( . 
-	ld d,a			;eef2	57 	W 
-	call sub_ef0eh		;eef3	cd 0e ef 	. . . 
-	ld e,a			;eef6	5f 	_ 
-	ld hl,lfb7ch		;eef7	21 7c fb 	! | . 
+        call sub_f811h          ;eedc	cd 11 f8 	. . . 
+        xor a                   ;eedf	af 	. 
+        ld (lef36h),a           ;eee0	32 36 ef 	2 6 . 
+        call sub_ef0eh          ;eee3	cd 0e ef 	. . . 
+        cp 00dh                 ;eee6	fe 0d 	. . 
+        jr z,lef61h             ;eee8	28 77 	( w 
+        cp 03ah                 ;eeea	fe 3a 	. : 
+        jr z,leedch             ;eeec	28 ee 	( . 
+        cp 03bh                 ;eeee	fe 3b 	. ; 
+        jr z,leedch             ;eef0	28 ea 	( . 
+        ld d,a                  ;eef2	57 	W 
+        call sub_ef0eh          ;eef3	cd 0e ef 	. . . 
+        ld e,a                  ;eef6	5f 	_ 
+        ld hl,lfb7ch            ;eef7	21 7c fb 	! | . 
 leefah:
-	ld a,(hl)			;eefa	7e 	~ 
-	or a			;eefb	b7 	. 
-	jr nz,$+4		;eefc	20 02 	  . 
+        ld a,(hl)               ;eefa	7e 	~ 
+        or a                    ;eefb	b7 	. 
+        jr nz,$+4               ;eefc	20 02 	  . 
 leefeh:
-	rst 8			;eefe	cf 	. 
-	ld d,023h		;eeff	16 23 	. # 
-	cp d			;ef01	ba 	. 
-	jr nz,lef08h		;ef02	20 04 	  . 
-	ld a,(hl)			;ef04	7e 	~ 
-	cp e			;ef05	bb 	. 
-	jr z,lef1ch		;ef06	28 14 	( . 
+        rst 8                   ;eefe	cf 	. 
+        ld d,023h               ;eeff	16 23 	. # 
+        cp d                    ;ef01	ba 	. 
+        jr nz,lef08h            ;ef02	20 04 	  . 
+        ld a,(hl)               ;ef04	7e 	~ 
+        cp e                    ;ef05	bb 	. 
+        jr z,lef1ch             ;ef06	28 14 	( . 
 lef08h:
-	inc hl			;ef08	23 	# 
-	inc hl			;ef09	23 	# 
-	inc hl			;ef0a	23 	# 
-	inc hl			;ef0b	23 	# 
-	jr leefah		;ef0c	18 ec 	. . 
+        inc hl                  ;ef08	23 	# 
+        inc hl                  ;ef09	23 	# 
+        inc hl                  ;ef0a	23 	# 
+        inc hl                  ;ef0b	23 	# 
+        jr leefah               ;ef0c	18 ec 	. . 
 sub_ef0eh:
-	rst 18h			;ef0e	df 	. 
-	inc hl			;ef0f	23 	# 
-	ld (05c5dh),hl		;ef10	22 5d 5c 	" ] \ 
-	cp 061h		;ef13	fe 61 	. a 
-	ret c			;ef15	d8 	. 
-	cp 07bh		;ef16	fe 7b 	. { 
-	ret nc			;ef18	d0 	. 
-	sub 020h		;ef19	d6 20 	.   
-	ret			;ef1b	c9 	. 
+        rst 18h                 ;ef0e	df 	. 
+        inc hl                  ;ef0f	23 	# 
+        ld (05c5dh),hl          ;ef10	22 5d 5c 	" ] \ 
+        cp 061h                 ;ef13	fe 61 	. a 
+        ret c                   ;ef15	d8 	. 
+        cp 07bh                 ;ef16	fe 7b 	. { 
+        ret nc                  ;ef18	d0 	. 
+        sub 020h                ;ef19	d6 20 	.   
+        ret                     ;ef1b	c9 	. 
 lef1ch:
 	inc hl			;ef1c	23 	# 
 	ld b,(hl)			;ef1d	46 	F 
@@ -585,20 +586,23 @@ lef61h:
 	ld a,(ix+000h)		;ef6b	dd 7e 00 	. ~ . 
 	or a			;ef6e	b7 	. 
 	jp nz,lf24fh		;ef6f	c2 4f f2 	. O . 
-	call 016c5h		;ef72	cd c5 16 	. . . 
+	call 016c5h		;ef72	cd c5 16 	. . .
+
+; Restore all registers
 lef75h:
-	pop ix		;ef75	dd e1 	. . 
-	pop af			;ef77	f1 	. 
-	pop bc			;ef78	c1 	. 
-	pop de			;ef79	d1 	. 
-	pop hl			;ef7a	e1 	. 
-	exx			;ef7b	d9 	. 
-	ex af,af'			;ef7c	08 	. 
-	pop af			;ef7d	f1 	. 
-	pop bc			;ef7e	c1 	. 
-	pop de			;ef7f	d1 	. 
-	pop hl			;ef80	e1 	. 
-	ret			;ef81	c9 	. 
+        pop ix                  ;ef75
+        pop af                  ;ef77
+        pop bc                  ;ef78
+        pop de                  ;ef79
+        pop hl                  ;ef7a
+        exx                     ;ef7b
+        ex af,af'               ;ef7c
+        pop af                  ;ef7d
+        pop bc                  ;ef7e
+        pop de                  ;ef7f
+        pop hl                  ;ef80
+        ret                     ;ef81
+ 
 lef82h:
 	rst 8			;ef82	cf 	. 
 	add hl,de			;ef83	19 	. 
@@ -1123,7 +1127,7 @@ sub_f2bbh:
 	ld hl,003e8h		;f2e2	21 e8 03 	! . . 
 	call sub_f542h		;f2e5	cd 42 f5 	. B . 
 	ld a,l			;f2e8	7d 	} 
-	ld (lfb2bh),a		;f2e9	32 2b fb 	2 + . 
+	ld (D009),a		;f2e9	32 2b fb 	2 + . 
 lf2ech:
 	call sub_efb4h		;f2ec	cd b4 ef 	. . . 
 	inc de			;f2ef	13 	. 
@@ -2201,22 +2205,25 @@ lfa5ch:
 	call sub_f542h		;fa61	cd 42 f5 	. B . 
 	add hl,bc			;fa64	09 	. 
 	ex (sp),hl			;fa65	e3 	. 
-	jp (hl)			;fa66	e9 	. 
+	jp (hl)			;fa66	e9 	.
+
+; Save all registers into stack
 sub_fa67h:
-	ex (sp),hl			;fa67	e3 	. 
-	push de			;fa68	d5 	. 
-	push bc			;fa69	c5 	. 
-	push af			;fa6a	f5 	. 
-	ex af,af'			;fa6b	08 	. 
-	exx			;fa6c	d9 	. 
-	push hl			;fa6d	e5 	. 
-	push de			;fa6e	d5 	. 
-	push bc			;fa6f	c5 	. 
-	push af			;fa70	f5 	. 
-	push ix		;fa71	dd e5 	. . 
-	ex af,af'			;fa73	08 	. 
-	exx			;fa74	d9 	. 
-	jp (hl)			;fa75	e9 	. 
+        ex (sp),hl              ;fa67
+        push de                 ;fa68
+        push bc                 ;fa69
+        push af                 ;fa6a
+        ex af,af'               ;fa6b
+        exx                     ;fa6c
+        push hl                 ;fa6d
+        push de                 ;fa6e
+        push bc                 ;fa6f
+        push af                 ;fa70
+        push ix                 ;fa71
+        ex af,af'               ;fa73
+        exx                     ;fa74
+        jp (hl)                 ;fa75
+
 lfa76h:
 	nop			;fa76	00 	. 
 	nop			;fa77	00 	. 
@@ -2422,10 +2429,11 @@ lfb1fh:
 	nop			;fb28	00 	. 
 	nop			;fb29	00 	. 
 	nop			;fb2a	00 	. 
-lfb2bh:
-	djnz lfb2dh		;fb2b	10 00 	. . 
+D009:
+        defb 010h               ;fb2b
+        defb 000h               ;fb2c
 lfb2dh:
-	ld e,e			;fb2d	5b 	[ 
+        defb 05bh               ;fb2d
 	rst 28h			;fb2e	ef 	. 
 	ld d,b			;fb2f	50 	P 
 lfb30h:
