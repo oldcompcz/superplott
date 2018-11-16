@@ -475,12 +475,12 @@ leeb7h:
         ld (ix+000h),000h       ;eec1
         ld hl,(05c5dh)          ;eec5   Address of the next character to be interpreted
         push hl                 ;eec8
-        ld hl,05b00h            ;eec9	21 00 5b 	! . [ 
-        ld (05c5dh),hl          ;eecc	22 5d 5c 	" ] \ 
-        ld (D009+1),hl          ;eecf	22 2c fb 	" , . 
-        ld hl,D008              ;eed2	21 c6 fa 	! . . 
-        ld (05c68h),hl          ;eed5	22 68 5c 	" h \ 
-        xor a                   ;eed8	af 	. 
+        ld hl,05b00h            ;eec9   Printer buffer 
+        ld (05c5dh),hl          ;eecc   Address of the next character to be interpreted 
+        ld (D009+1),hl          ;eecf
+        ld hl,D008              ;eed2
+        ld (05c68h),hl          ;eed5   Address of area used for calculator's memory. 
+        xor a                   ;eed8
         call sub_f721h          ;eed9	cd 21 f7 	. ! . 
 leedch:
         call sub_f811h          ;eedc	cd 11 f8 	. . . 
@@ -757,17 +757,20 @@ lf03bh:
 	ld hl,lfa96h+2		;f05c	21 98 fa 	! . . 
 	ld de,lfa96h		;f05f	11 96 fa 	. . . 
 sub_f062h:
-	ld b,002h		;f062	06 02 	. . 
+	ld b,002h		;f062	06 02 	. .
+
+; Exchnge memory areas (provide hl as src, de as dest and b as count)
 lf064h:
-	ld a,(de)			;f064	1a 	. 
-	ld c,(hl)			;f065	4e 	N 
-	ex de,hl			;f066	eb 	. 
-	ld (hl),c			;f067	71 	q 
-	ld (de),a			;f068	12 	. 
-	inc hl			;f069	23 	# 
-	inc de			;f06a	13 	. 
-	djnz lf064h		;f06b	10 f7 	. . 
-	ret			;f06d	c9 	. 
+        ld a,(de)               ;f064
+        ld c,(hl)               ;f065
+        ex de,hl                ;f066
+        ld (hl),c               ;f067
+        ld (de),a               ;f068
+        inc hl                  ;f069
+        inc de                  ;f06a
+        djnz lf064h             ;f06b
+        ret                     ;f06d
+ 
 	call sub_ef84h		;f06e	cd 84 ef 	. . . 
 	call sub_ef35h		;f071	cd 35 ef 	. 5 . 
 	jr nz,lf07bh		;f074	20 05 	  . 
@@ -1769,40 +1772,44 @@ lf718h:
 	add hl,hl			;f71d	29 	) 
 	add hl,hl			;f71e	29 	) 
 	dec hl			;f71f	2b 	+ 
-	ret			;f720	c9 	. 
+	ret			;f720	c9 	.
+
+; Save/Restore variable set  
 sub_f721h:
-	xor 000h		;f721	ee 00 	. . 
-	and 001h		;f723	e6 01 	. . 
-	ret z			;f725	c8 	. 
-	ld hl,lfb13h		;f726	21 13 fb 	! . . 
-	ld de,lfb1fh		;f729	11 1f fb 	. . . 
-	ld b,00ch		;f72c	06 0c 	. . 
-	call lf064h		;f72e	cd 64 f0 	. d . 
-	ld hl,lfa7ch		;f731	21 7c fa 	! | . 
-	inc b			;f734	04 	. 
-	call lf064h		;f735	cd 64 f0 	. d . 
-	ld a,(sub_f721h+1)		;f738	3a 22 f7 	: " . 
-	cpl			;f73b	2f 	/ 
-	ld (sub_f721h+1),a		;f73c	32 22 f7 	2 " . 
-	ret z			;f73f	c8 	. 
+        xor 000h                ;f721   self modified by f73c 
+        and 001h                ;f723
+        ret z                   ;f725
+        ld hl,lfb13h            ;f726   source
+        ld de,lfb1fh            ;f729   destination
+        ld b,00ch               ;f72c   b = 12
+        call lf064h             ;f72e   exchange memory areas
+        ld hl,lfa7ch            ;f731   source
+        inc b                   ;f734   b = 1
+        call lf064h             ;f735   exchange memory areas
+        ld a,(sub_f721h+1)      ;f738
+        cpl                     ;f73b   complement
+        ld (sub_f721h+1),a      ;f73c
+        ret z                   ;f73f
+
+; Reset variable set
 sub_f740h:
-	ld hl,00000h		;f740	21 00 00 	! . . 
-	ld (D006_whe_x),hl		;f743	22 aa fa 	" . . 
-	ld (D007_whe_y),hl		;f746	22 ac fa 	" . . 
-	ld (lfab2h),hl		;f749	22 b2 fa 	" . . 
-	ld (lfab4h),hl		;f74c	22 b4 fa 	" . . 
-	ld (lfab6h),hl		;f74f	22 b6 fa 	" . . 
-	ld (lfabah),hl		;f752	22 ba fa 	" . . 
-	ld (lfa8fh+1),hl		;f755	22 90 fa 	" . . 
-	ld (lfa92h),hl		;f758	22 92 fa 	" . . 
-	ld hl,0008ch		;f75b	21 8c 00 	! . . 
-	ld (lfabch),hl		;f75e	22 bc fa 	" . . 
-	ld (lfab8h),hl		;f761	22 b8 fa 	" . . 
-	ld a,001h		;f764	3e 01 	> . 
-	ld (lfa8fh),a		;f766	32 8f fa 	2 . . 
-	call sub_f9c9h		;f769	cd c9 f9 	. . . 
-	ld (ix+015h),03eh		;f76c	dd 36 15 3e 	. 6 . > 
-	jp lf21dh		;f770	c3 1d f2 	. . .
+        ld hl,00000h            ;f740   hl = 0
+        ld (D006_whe_x),hl      ;f743
+        ld (D007_whe_y),hl      ;f746
+        ld (lfab2h),hl          ;f749
+        ld (lfab4h),hl          ;f74c
+        ld (lfab6h),hl          ;f74f
+        ld (lfabah),hl          ;f752
+        ld (lfa8fh+1),hl        ;f755
+        ld (lfa92h),hl          ;f758
+        ld hl,0008ch            ;f75b   hl = 140
+        ld (lfabch),hl          ;f75e
+        ld (lfab8h),hl          ;f761
+        ld a,001h               ;f764
+        ld (lfa8fh),a           ;f766
+        call sub_f9c9h          ;f769
+        ld (ix+015h),03eh       ;f76c   62
+        jp lf21dh               ;f770
 
 ; *****************************************************************************
 ; * LIST
@@ -2232,11 +2239,12 @@ lfa79h:
 	nop			;fa79	00 	. 
 lfa7ah:
 	nop			;fa7a	00 	. 
-	nop			;fa7b	00 	. 
+	nop			;fa7b	00 	.
+ 
 lfa7ch:
-	ld (de),a			;fa7c	12 	. 
-	nop			;fa7d	00 	. 
-	nop			;fa7e	00 	. 
+        defb 012h               ;fa7c   12
+        defb 000h               ;fa7d   00
+        defb 000h               ;fa7e   00
 lfa7fh:
 	nop			;fa7f	00 	. 
 lfa80h:
@@ -2253,9 +2261,12 @@ lfa85h:
 	ld bc,008e5h		;fa89	01 e5 08 	. . . 
 	exx			;fa8c	d9 	. 
 	nop			;fa8d	00 	. 
-	nop			;fa8e	00 	. 
+	nop			;fa8e	00 	.
+ 
 lfa8fh:
-	ld bc,00000h		;fa8f	01 00 00 	. . . 
+        defb 001h               ;fa8f   01
+        defb 000h               ;fa90   00
+        defb 000h               ;fa91   00
 lfa92h:
 	nop			;fa92	00 	. 
 	nop			;fa93	00 	. 
@@ -2400,35 +2411,39 @@ lfb10h:
 	ld l,0fch		;fb10	2e fc 	. . 
 lfb12h:
 	nop			;fb12	00 	. 
+
 lfb13h:
-	jr lfb15h		;fb13	18 00 	. . 
+        defb 018h               ;fb13   18
+        defb 000h               ;fb14   00
 lfb15h:
-	nop			;fb15	00 	. 
-	nop			;fb16	00 	. 
+        defb 000h               ;fb15   00
+        defb 000h               ;fb16   00
 lfb17h:
-	nop			;fb17	00 	. 
-	nop			;fb18	00 	. 
+        defb 000h               ;fb17   00
+        defb 000h               ;fb18   00
 lfb19h:
-	jr z,lfb1bh		;fb19	28 00 	( . 
+        defb 028h               ;fb19   28
+        defb 000h               ;fb1a   00
 lfb1bh:
-	nop			;fb1b	00 	. 
-	nop			;fb1c	00 	. 
+        defb 000h               ;fb1b   00
+        defb 000h               ;fb1c   00
 lfb1dh:
-	ret c			;fb1d	d8 	. 
-	rst 38h			;fb1e	ff 	. 
+        defb 0d8h               ;fb1d   d8
+        defb 0ffh               ;fb1e   ff
+
 lfb1fh:
-	nop			;fb1f	00 	. 
-	nop			;fb20	00 	. 
-	rrca			;fb21	0f 	. 
-	nop			;fb22	00 	. 
-	rst 20h			;fb23	e7 	. 
-	rst 38h			;fb24	ff 	. 
-	nop			;fb25	00 	. 
-	nop			;fb26	00 	. 
-	add hl,de			;fb27	19 	. 
-	nop			;fb28	00 	. 
-	nop			;fb29	00 	. 
-	nop			;fb2a	00 	. 
+        defb 000h               ;fb1f   00
+        defb 000h               ;fb20   00
+        defb 00fh               ;fb21   0f
+        defb 000h               ;fb22   00
+        defb 0e7h               ;fb23   e7
+        defb 0ffh               ;fb24   ff
+        defb 000h               ;fb25   00
+        defb 000h               ;fb26   00
+        defb 019h               ;fb27   19
+        defb 000h               ;fb28   00
+        defb 000h               ;fb29   00
+        defb 000h               ;fb2a   00
 D009:
         defb 010h               ;fb2b
         defb 000h               ;fb2c
