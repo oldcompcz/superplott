@@ -450,7 +450,7 @@ STREAMS:
 ; *****************************************************************************
  
 ENTRY:
-        call sub_fa67h          ;ee9a   Save all registers into stack
+        call sub_fa67h          ;ee9a   save all registers into stack
         cp 006h                 ;ee9d   if a = comma
         jr nz,leea3h            ;ee9f
         ld a,02ch               ;eea1   then replace it for ','
@@ -465,38 +465,38 @@ leea3h:
         jr c,leeb7h             ;eeaf 
         dec h                   ;eeb1   if bufer overflowed decrease about 1
         ld (D009+1),hl          ;eeb2   save pointer
-        rst 8                   ;eeb5   Error Restart 
+        rst 8                   ;eeb5   error message 
         rrca                    ;eeb6
 leeb7h:
         ex af,af'               ;eeb7   restore register a
         cp 00dh                 ;eeb8   test for ENTER 
-        jp nz,lef75h            ;eeba   Restore all registers and return for next char !!!
+        jp nz,lef75h            ;eeba   restore all registers and return for next char !!!
         ld ix,D010              ;eebd
         ld (ix+000h),000h       ;eec1
-        ld hl,(05c5dh)          ;eec5   Address of the next character to be interpreted
+        ld hl,(05c5dh)          ;eec5   address of the next character to be interpreted
         push hl                 ;eec8
-        ld hl,05b00h            ;eec9   Printer buffer 
-        ld (05c5dh),hl          ;eecc   Set address of the next character to be interpreted to Print buffer 
-        ld (D009+1),hl          ;eecf   Set command buffer pointer to Print buffer
+        ld hl,05b00h            ;eec9   printer buffer 
+        ld (05c5dh),hl          ;eecc   set address of the next character to be interpreted to Print buffer 
+        ld (D009+1),hl          ;eecf   set command buffer pointer to Print buffer
         ld hl,D008              ;eed2   D008 contains pointer to print buffer
-        ld (05c68h),hl          ;eed5   Address of area used for calculator's memory. 
+        ld (05c68h),hl          ;eed5   address of area used for calculator's memory. 
         xor a                   ;eed8
-        call sub_f721h          ;eed9   Exchange buffers
+        call sub_f721h          ;eed9   exchange buffers
 leedch:
-        call sub_f811h          ;eedc	cd 11 f8 	. . . 
-        xor a                   ;eedf	af 	. 
-        ld (lef36h),a           ;eee0	32 36 ef 	2 6 . 
-        call sub_ef0eh          ;eee3	cd 0e ef 	. . . 
-        cp 00dh                 ;eee6	fe 0d 	. . 
-        jr z,lef61h             ;eee8	28 77 	( w 
-        cp 03ah                 ;eeea	fe 3a 	. : 
-        jr z,leedch             ;eeec	28 ee 	( . 
-        cp 03bh                 ;eeee	fe 3b 	. ; 
-        jr z,leedch             ;eef0	28 ea 	( . 
-        ld d,a                  ;eef2	57 	W 
-        call sub_ef0eh          ;eef3	cd 0e ef 	. . . 
-        ld e,a                  ;eef6	5f 	_ 
-        ld hl,lfb7ch            ;eef7	21 7c fb 	! | . 
+        call sub_f811h          ;eedc   some I/O operations ???
+        xor a                   ;eedf
+        ld (lef36h),a           ;eee0
+        call sub_ef0eh          ;eee3   get next char and upper case it
+        cp 00dh                 ;eee6   check for ENTER
+        jr z,lef61h             ;eee8   clear editing area and restore all regs
+        cp 03ah                 ;eeea   check for ':'
+        jr z,leedch             ;eeec
+        cp 03bh                 ;eeee   check for ';'
+        jr z,leedch             ;eef0
+        ld d,a                  ;eef2
+        call sub_ef0eh          ;eef3
+        ld e,a                  ;eef6
+        ld hl,lfb7ch            ;eef7
 leefah:
         ld a,(hl)               ;eefa	7e 	~ 
         or a                    ;eefb	b7 	. 
@@ -514,17 +514,20 @@ lef08h:
         inc hl                  ;ef09	23 	# 
         inc hl                  ;ef0a	23 	# 
         inc hl                  ;ef0b	23 	# 
-        jr leefah               ;ef0c	18 ec 	. . 
+        jr leefah               ;ef0c	18 ec 	. .
+
+; Get character and upper case it
 sub_ef0eh:
-        rst 18h                 ;ef0e	df 	. 
-        inc hl                  ;ef0f	23 	# 
-        ld (05c5dh),hl          ;ef10	22 5d 5c 	" ] \ 
-        cp 061h                 ;ef13	fe 61 	. a 
-        ret c                   ;ef15	d8 	. 
-        cp 07bh                 ;ef16	fe 7b 	. { 
-        ret nc                  ;ef18	d0 	. 
-        sub 020h                ;ef19	d6 20 	.   
-        ret                     ;ef1b	c9 	. 
+        rst 18h                 ;ef0e   get char from command line
+        inc hl                  ;ef0f
+        ld (05c5dh),hl          ;ef10   Address of the next character to be interpreted
+        cp 061h                 ;ef13   check for 'a'
+        ret c                   ;ef15   return if less
+        cp 07bh                 ;ef16   check for '{' = 'z' + 1
+        ret nc                  ;ef18   return if greater
+        sub 020h                ;ef19   upper case
+        ret                     ;ef1b
+
 lef1ch:
 	inc hl			;ef1c	23 	# 
 	ld b,(hl)			;ef1d	46 	F 
@@ -549,7 +552,7 @@ lef30h:
 sub_ef35h:
 	xor a			;ef35	af 	. 
 lef36h:
-	nop			;ef36	00 	. 
+        defb 000h               ;ef36	00 	. 
 	call sub_ef42h		;ef37	cd 42 ef 	. B . 
 	ret nz			;ef3a	c0 	. 
 	ld a,0c9h		;ef3b	3e c9 	> . 
@@ -577,16 +580,18 @@ sub_ef42h:
 	rst 28h			;ef5c	ef 	. 
 	dec de			;ef5d	1b 	. 
 	jr c,$+22		;ef5e	38 14 	8 . 
-	ret			;ef60	c9 	. 
+	ret			;ef60	c9 	.
+
+; Clear editing area
 lef61h:
-	pop hl			;ef61	e1 	. 
-	ld (05c5dh),hl		;ef62	22 5d 5c 	" ] \ 
-	ld hl,05c92h		;ef65	21 92 5c 	! . \ 
-	ld (05c68h),hl		;ef68	22 68 5c 	" h \ 
-	ld a,(ix+000h)		;ef6b	dd 7e 00 	. ~ . 
-	or a			;ef6e	b7 	. 
-	jp nz,lf24fh		;ef6f	c2 4f f2 	. O . 
-	call 016c5h		;ef72	cd c5 16 	. . .
+        pop hl                  ;ef61
+        ld (05c5dh),hl          ;ef62   address of the next character to be interpreted 
+        ld hl,05c92h            ;ef65   calculator's memory area 
+        ld (05c68h),hl          ;ef68   address of area used for calculator's memory
+        ld a,(ix+000h)          ;ef6b
+        or a                    ;ef6e
+        jp nz,lf24fh            ;ef6f   error message ???
+        call 016c5h             ;ef72   clear editing area
 
 ; Restore all registers
 lef75h:
@@ -645,44 +650,53 @@ lefa6h:
 	ld (05c65h),hl		;efb0	22 65 5c 	" e \ 
 	ret			;efb3	c9 	.
  
+;
 sub_efb4h:
-	rst 28h			;efb4	ef 	. 
-	and d			;efb5	a2 	. 
-	rrca			;efb6	0f 	. 
-	daa			;efb7	27 	' 
-	ld (bc),a			;efb8	02 	. 
-	jr c,lefa6h		;efb9	38 eb 	8 . 
-	xor a			;efbb	af 	. 
-	or (hl)			;efbc	b6 	. 
-	jr nz,lefcbh		;efbd	20 0c 	  . 
-	inc hl			;efbf	23 	# 
-	ld a,(hl)			;efc0	7e 	~ 
-	inc hl			;efc1	23 	# 
-	ld e,(hl)			;efc2	5e 	^ 
-	inc hl			;efc3	23 	# 
-	ld d,(hl)			;efc4	56 	V 
-	xor d			;efc5	aa 	. 
-	ld l,e			;efc6	6b 	k 
-	ld h,d			;efc7	62 	b 
-	and 0c0h		;efc8	e6 c0 	. . 
-	ret z			;efca	c8 	. 
+        rst 28h                 ;efb4   call fp calculator
+
+        defb 0a2h               ;efb5   stk-half
+        defb 00fh               ;efb6   add
+        defb 027h               ;efb7   integer
+        defb 002h               ;efb8   delete
+        defb 038h               ;efb9   end-calc
+
+        ex de,hl                ;efba 
+        xor a                   ;efbb 
+        or (hl)                 ;efbc 
+        jr nz,lefcbh            ;efbd 
+        inc hl                  ;efbf 
+        ld a,(hl)               ;efc0 
+        inc hl                  ;efc1 
+        ld e,(hl)               ;efc2 
+        inc hl                  ;efc3 
+        ld d,(hl)               ;efc4 
+        xor d                   ;efc5 
+        ld l,e                  ;efc6 
+        ld h,d                  ;efc7 
+        and 0c0h                ;efc8 
+        ret z                   ;efca 
 lefcbh:
-	rst 8			;efcb	cf 	. 
-	ld a,(bc)			;efcc	0a 	. 
+        rst 8                   ;efcb   print error 
+        ld a,(bc)               ;efcc 
 lefcdh:
-	ld (lfa80h),a		;efcd	32 80 fa 	2 . . 
-	call sub_ef84h		;efd0	cd 84 ef 	. . . 
-	rst 28h			;efd3	ef 	. 
-	call pe,038edh		;efd4	ec ed 38 	. . 8 
+        ld (lfa80h),a           ;efcd 
+        call sub_ef84h          ;efd0 
+        rst 28h                 ;efd3   call fp calculator
+
+        defb 0ech               ;efd4   get |m|
+        defb 0edh               ;efd5   get COS 8 (??? cannot read it from doc)
+        defb 038h               ;efd6   end-calc
+
 lefd7h:
-	call sub_effch		;efd7	cd fc ef 	. . . 
-	call sub_f3ddh		;efda	cd dd f3 	. . . 
+        call sub_effch          ;efd7	cd fc ef 	. . . 
+        call sub_f3ddh          ;efda	cd dd f3 	. . . 
 lefddh:
-	ld hl,D006_whe_x		;efdd	21 aa fa 	! . . 
-	ld de,lfab2h		;efe0	11 b2 fa 	. . . 
-	ld bc,0000ch		;efe3	01 0c 00 	. . . 
-	ldir		;efe6	ed b0 	. . 
-	ret			;efe8	c9 	. 
+        ld hl,D006_whe_x        ;efdd	21 aa fa 	! . . 
+        ld de,lfab2h            ;efe0	11 b2 fa 	. . . 
+        ld bc,0000ch            ;efe3	01 0c 00 	. . . 
+        ldir                    ;efe6	ed b0 	. . 
+        ret                     ;efe8	c9 	.
+
 lefe9h:
 	ld (lfa80h),a		;efe9	32 80 fa 	2 . . 
 	call sub_ef84h		;efec	cd 84 ef 	. . . 
@@ -1036,14 +1050,17 @@ lf21dh:
 lf24ah:
 	pop de			;f24a	d1 	. 
 	dec (ix+000h)		;f24b	dd 35 00 	. 5 . 
-	jp (hl)			;f24e	e9 	. 
+	jp (hl)			;f24e	e9 	.
+
+; 
 lf24fh:
-	rst 8			;f24f	cf 	. 
-	add hl,bc			;f250	09 	. 
+        rst 8                   ;f24f   show error
+        add hl,bc               ;f250
 lf251h:
-	call sub_efb4h		;f251	cd b4 ef 	. . . 
-	ld (ix+006h),l		;f254	dd 75 06 	. u . 
-	ret			;f257	c9 	. 
+        call sub_efb4h          ;f251
+        ld (ix+006h),l          ;f254	dd 75 06 	. u . 
+        ret                     ;f257	c9 	. 
+
 lf258h:
 	ld hl,lfc2eh		;f258	21 2e fc 	! . . 
 	ld (lfb10h),hl		;f25b	22 10 fb 	" . . 
@@ -2288,8 +2305,8 @@ lfa8fh:
         defb 000h               ;fa90   00
         defb 000h               ;fa91   00
 lfa92h:
-	nop			;fa92	00 	. 
-	nop			;fa93	00 	. 
+        defb 000h               ;fa92   00
+        defb 000h               ;fa93   00
 lfa94h:
 	nop			;fa94	00 	. 
 	nop			;fa95	00 	. 
@@ -2326,30 +2343,30 @@ lfab0h:
 	nop			;fab0	00 	. 
 	nop			;fab1	00 	. 
 lfab2h:
-	nop			;fab2	00 	. 
-	nop			;fab3	00 	. 
+        defb 000h               ;fab2	00 	. 
+        defb 000h               ;fab3	00 	. 
 lfab4h:
-	nop			;fab4	00 	. 
-	nop			;fab5	00 	. 
+        defb 000h               ;fab4	00 	. 
+        defb 000h               ;fab5	00 	. 
 lfab6h:
-	nop			;fab6	00 	. 
-	nop			;fab7	00 	. 
+        defb 000h               ;fab6	00 	. 
+        defb 000h               ;fab7	00 	. 
 lfab8h:
-	nop			;fab8	00 	. 
-	nop			;fab9	00 	. 
+        defb 000h               ;fab8	00 	. 
+        defb 000h               ;fab9	00 	. 
 lfabah:
-	nop			;faba	00 	. 
-	nop			;fabb	00 	. 
+        defb 000h               ;faba	00 	. 
+        defb 000h               ;fabb	00 	. 
 lfabch:
-	nop			;fabc	00 	. 
-	nop			;fabd	00 	. 
+        defb 000h               ;fabc	00 	. 
+        defb 000h               ;fabd	00 	. 
 lfabeh:
         defb 000h               ;fabe   D006_whe_x tmp
         defb 000h               ;fabf
 lfac0h:
         defb 000h               ;fac0   D006_whe_y tmp
         defb 000h               ;fac1
- 
+
 D004_x_pos:
         defw 00000h             ;fac2
 D003_y_pos:
