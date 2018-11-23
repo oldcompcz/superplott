@@ -493,28 +493,32 @@ leedch:
         jr z,leedch             ;eeec
         cp 03bh                 ;eeee   check for ';'
         jr z,leedch             ;eef0
-        ld d,a                  ;eef2
-        call sub_ef0eh          ;eef3
-        ld e,a                  ;eef6
+        ld d,a                  ;eef2   save char
+        call sub_ef0eh          ;eef3   get character and upper case it
+        ld e,a                  ;eef6   save char
         ld hl,lfb7ch            ;eef7
 leefah:
-        ld a,(hl)               ;eefa	7e 	~ 
-        or a                    ;eefb	b7 	. 
-        jr nz,$+4               ;eefc	20 02 	  . 
+        ld a,(hl)               ;eefa
+        or a                    ;eefb
+        jr nz,$+4               ;eefc   inc hl, cp d, ...
 leefeh:
-        rst 8                   ;eefe	cf 	. 
-        ld d,023h               ;eeff	16 23 	. # 
-        cp d                    ;ef01	ba 	. 
-        jr nz,lef08h            ;ef02	20 04 	  . 
-        ld a,(hl)               ;ef04	7e 	~ 
-        cp e                    ;ef05	bb 	. 
-        jr z,lef1ch             ;ef06	28 14 	( . 
+        rst 8                   ;eefe   print error if a = 0
+        ld d,023h               ;eeff
+        cp d                    ;ef01   check for '#' 
+        jr nz,lef08h            ;ef02   skip check for channel no
+        ld a,(hl)               ;ef04
+        cp e                    ;ef05   check for channel no 
+        jr z,lef1ch             ;ef06   jump if channel matches
 lef08h:
-        inc hl                  ;ef08	23 	# 
-        inc hl                  ;ef09	23 	# 
-        inc hl                  ;ef0a	23 	# 
-        inc hl                  ;ef0b	23 	# 
-        jr leefah               ;ef0c	18 ec 	. .
+        inc hl                  ;ef08
+        inc hl                  ;ef09
+        inc hl                  ;ef0a
+        inc hl                  ;ef0b
+        jr leefah               ;ef0c   loop
+        
+; *****************************************************************************
+; * ENTRY - main loop end
+; *****************************************************************************
 
 ; Get character and upper case it
 sub_ef0eh:
@@ -528,27 +532,29 @@ sub_ef0eh:
         sub 020h                ;ef19   upper case
         ret                     ;ef1b
 
+; Set channel
 lef1ch:
-	inc hl			;ef1c	23 	# 
-	ld b,(hl)			;ef1d	46 	F 
-	inc hl			;ef1e	23 	# 
-	ld e,(hl)			;ef1f	5e 	^ 
-	inc hl			;ef20	23 	# 
-	ld d,(hl)			;ef21	56 	V 
-	push de			;ef22	d5 	. 
-	ld a,b			;ef23	78 	x 
-	or a			;ef24	b7 	. 
-	jr z,lef30h		;ef25	28 09 	( . 
+        inc hl                  ;ef1c	23 	# 
+        ld b,(hl)               ;ef1d	46 	F 
+        inc hl                  ;ef1e	23 	# 
+        ld e,(hl)               ;ef1f	5e 	^ 
+        inc hl                  ;ef20	23 	# 
+        ld d,(hl)               ;ef21	56 	V 
+        push de                 ;ef22	d5 	. 
+        ld a,b                  ;ef23	78 	x 
+        or a                    ;ef24	b7 	. 
+        jr z,lef30h             ;ef25	28 09 	( . 
 lef27h:
-	push bc			;ef27	c5 	. 
-	call sub_ef35h		;ef28	cd 35 ef 	. 5 . 
-	jr z,lef82h		;ef2b	28 55 	( U 
-	pop bc			;ef2d	c1 	. 
-	djnz lef27h		;ef2e	10 f7 	. . 
+        push bc                 ;ef27	c5 	. 
+        call sub_ef35h          ;ef28	cd 35 ef 	. 5 . 
+        jr z,lef82h             ;ef2b	28 55 	( U 
+        pop bc                  ;ef2d	c1 	. 
+        djnz lef27h             ;ef2e	10 f7 	. . 
 lef30h:
-	ld hl,leedch		;ef30	21 dc ee 	! . . 
-	ex (sp),hl			;ef33	e3 	. 
-	jp (hl)			;ef34	e9 	. 
+        ld hl,leedch            ;ef30	21 dc ee 	! . . 
+        ex (sp),hl              ;ef33	e3 	. 
+        jp (hl)                 ;ef34	e9 	. 
+
 sub_ef35h:
 	xor a			;ef35	af 	. 
 lef36h:
@@ -2553,7 +2559,7 @@ lfb76h:
 	ld bc,06c64h		;fb78	01 64 6c 	. d l 
 	ld (hl),h			;fb7b	74 	t 
 lfb7ch:
-	ld d,(hl)			;fb7c	56 	V 
+        ld d,(hl)               ;fb7c   test about zero at eef7
 	ld b,c			;fb7d	41 	A 
 	ld (bc),a			;fb7e	02 	. 
 	rlca			;fb7f	07 	. 
