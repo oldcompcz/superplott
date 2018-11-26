@@ -2557,117 +2557,207 @@ lfb76h:
 	ld (bc),a			;fb76	02 	. 
 	ld (bc),a			;fb77	02 	. 
 	ld bc,06c64h		;fb78	01 64 6c 	. d l 
-	ld (hl),h			;fb7b	74 	t 
-lfb7ch:
-        ld d,(hl)               ;fb7c   test about zero at eef7
-	ld b,c			;fb7d	41 	A 
-	ld (bc),a			;fb7e	02 	. 
-	rlca			;fb7f	07 	. 
-	ret p			;fb80	f0 	. 
-	ld d,(hl)			;fb81	56 	V 
-	ld d,d			;fb82	52 	R 
-	ld (bc),a			;fb83	02 	. 
-	dec bc			;fb84	0b 	. 
-lfb85h:
-	ret p			;fb85	f0 	. 
-	ld c,l			;fb86	4d 	M 
-	ld b,c			;fb87	41 	A 
-	ld (bc),a			;fb88	02 	. 
-	rrca			;fb89	0f 	. 
-lfb8ah:
-	ret p			;fb8a	f0 	. 
-	ld c,l			;fb8b	4d 	M 
-	ld d,d			;fb8c	52 	R 
-	ld (bc),a			;fb8d	02 	. 
-	ld (de),a			;fb8e	12 	. 
-	ret p			;fb8f	f0 	. 
-	ld d,b			;fb90	50 	P 
-	ld b,c			;fb91	41 	A 
-	ld (bc),a			;fb92	02 	. 
-	dec d			;fb93	15 	. 
-	ret p			;fb94	f0 	. 
-	ld d,b			;fb95	50 	P 
-	ld d,d			;fb96	52 	R 
-	ld (bc),a			;fb97	02 	. 
-	jr z,lfb8ah		;fb98	28 f0 	( . 
-lfb9ah:
-	ld b,e			;fb9a	43 	C 
-	ld d,e			;fb9b	53 	S 
-	ld (bc),a			;fb9c	02 	. 
-	ld l,(hl)			;fb9d	6e 	n 
-	ret p			;fb9e	f0 	. 
-	ld b,h			;fb9f	44 	D 
-	ld d,a			;fba0	57 	W 
-	inc b			;fba1	04 	. 
-	ld (hl),0f0h		;fba2	36 f0 	6 . 
-	ld d,(hl)			;fba4	56 	V 
-	ld d,a			;fba5	57 	W 
-	nop			;fba6	00 	. 
-	djnz lfb9ah		;fba7	10 f1 	. . 
-	ld c,a			;fba9	4f 	O 
-	ld b,a			;fbaa	47 	G 
-	ld (bc),a			;fbab	02 	. 
-	cpl			;fbac	2f 	/ 
-	ret p			;fbad	f0 	. 
-	ld d,b			;fbae	50 	P 
-	ld d,e			;fbaf	53 	S 
-	nop			;fbb0	00 	. 
-	ld (04ef2h),hl		;fbb1	22 f2 4e 	" . N 
-	ld d,e			;fbb4	53 	S 
-	nop			;fbb5	00 	. 
-	dec e			;fbb6	1d 	. 
-	jp p,04353h		;fbb7	f2 53 43 	. S C 
-	ld bc,lf151h		;fbba	01 51 f1 	. Q . 
-	ld b,e			;fbbd	43 	C 
-	ld d,d			;fbbe	52 	R 
-	ld bc,lf212h		;fbbf	01 12 f2 	. . . 
-	ld b,c			;fbc2	41 	A 
-	ld b,e			;fbc3	43 	C 
-	inc bc			;fbc4	03 	. 
-	ld (hl),b			;fbc5	70 	p 
-	pop af			;fbc6	f1 	. 
-	ld d,d			;fbc7	52 	R 
-	jr z,lfbcbh		;fbc8	28 01 	( . 
-	daa			;fbca	27 	' 
-lfbcbh:
-	jp p,02952h		;fbcb	f2 52 29 	. R ) 
-	nop			;fbce	00 	. 
-	inc sp			;fbcf	33 	3 
-	jp p,0534ch		;fbd0	f2 4c 53 	. L S 
-	ld bc,lf251h		;fbd3	01 51 f2 	. Q . 
-	ld c,b			;fbd6	48 	H 
-	ld c,l			;fbd7	4d 	M 
-	nop			;fbd8	00 	. 
-	sub c			;fbd9	91 	. 
-	push af			;fbda	f5 	. 
-	ld c,c			;fbdb	49 	I 
-	ld b,e			;fbdc	43 	C 
-	nop			;fbdd	00 	. 
-	push af			;fbde	f5 	. 
-	jp p,04e49h		;fbdf	f2 49 4e 	. I N 
-	nop			;fbe2	00 	. 
-	ld d,a			;fbe3	57 	W 
-	xor 044h		;fbe4	ee 44 	. D 
-	ld b,a			;fbe6	47 	G 
-	ld bc,lf163h		;fbe7	01 63 f1 	. c . 
-	ld b,e			;fbea	43 	C 
-	ld d,b			;fbeb	50 	P 
-	ld bc,lf31ah		;fbec	01 1a f3 	. . . 
-	ld c,h			;fbef	4c 	L 
-	ld d,h			;fbf0	54 	T 
-	ld bc,lf258h		;fbf1	01 58 f2 	. X . 
-	ld d,l			;fbf4	55 	U 
-	ld c,h			;fbf5	4c 	L 
-	nop			;fbf6	00 	. 
-	sub d			;fbf7	92 	. 
-	jp p,04c46h		;fbf8	f2 46 4c 	. F L 
-	inc bc			;fbfb	03 	. 
-	adc a,0f2h		;fbfc	ce f2 	. . 
-	ld c,l			;fbfe	4d 	M 
-	ld b,(hl)			;fbff	46 	F 
-	nop			;fc00	00 	. 
-	ld l,b			;fc01	68 	h 
-	call pe,08000h		;fc02	ec 00 80 	. . . 
+	ld (hl),h			;fb7b	74 	t
+
+; *****************************************************************************
+; * Table of Commands
+; *****************************************************************************
+ 
+lfb7ch: ; Vector Absolute (VA)
+        defb 'V'                ;fb7c
+        defb 'A'                ;fb7d
+        defb 002h               ;fb7e
+        defb 007h               ;fb7f
+        defb 0f0h               ;fb80
+
+        ; Vector Relative (VR) 
+        defb 'V'                ;fb81
+        defb 'R'                ;fb82
+        defb 002h               ;fb83
+        defb 00bh               ;fb84
+lfb85h: defb 0f0h               ;fb85
+
+        ; Move Absolute (MA) 
+        defb 'M'                ;fb86
+        defb 'A'                ;fb87
+        defb 002h               ;fb88
+        defb 00fh               ;fb89
+lfb8ah: defb 0f0h               ;fb8a
+
+        ; Move Relative (MR)
+        defb 'M'                ;fb8b
+        defb 'R'                ;fb8c
+        defb 002h               ;fb8d
+        defb 012h               ;fb8e
+        defb 0f0h               ;fb8f
+
+        ; Point Absolute (PA) 
+        defb 'P'                ;fb90
+        defb 'A'                ;fb91
+        defb 002h               ;fb92
+        defb 015h               ;fb93
+        defb 0f0h               ;fb94
+
+        ; Point Relative (PR)
+        defb 'P'                ;fb95
+        defb 'R'                ;fb96
+        defb 002h               ;fb97
+        defb 028h               ;fb98
+        defb 0f0h               ;fb99
+
+lfb9ah: ; Character size (CS)
+        defb 'C'                ;fb9a
+        defb 'S'                ;fb9b
+        defb 002h               ;fb9c
+        defb 06eh               ;fb9d
+        defb 0f0h               ;fb9e
+
+        ; Define Window (DW) 
+        defb 'D'                ;fb9f
+        defb 'W'                ;fba0
+        defb 004h               ;fba1
+        defb 036h               ;fba2
+        defb 0f0h               ;fba3
+
+        ; Verify Window (VW) 
+        defb 'V'                ;fba4
+        defb 'W'                ;fba5
+        defb 000h               ;fba6
+        defb 010h               ;fba7
+        defb 0f1h               ;fba8
+
+        ; Origin (OG)
+        defb 'O'                ;fba9
+        defb 'G'                ;fbaa
+        defb 002h               ;fbab
+        defb 02fh               ;fbac
+        defb 0f0h               ;fbad
+
+        ; Proportional Spacing (PS) 
+        defb 'P'                ;fbae
+        defb 'S'                ;fbaf
+        defb 000h               ;fbb0
+        defb 022h               ;fbb1
+        defb 0f2h               ;fbb2
+
+        ; Normal Spacing (NS)
+        defb 'N'                ;fbb3
+        defb 'S'                ;fbb4
+        defb 000h               ;fbb5
+        defb 01dh               ;fbb6
+        defb 0f2h               ;fbb7
+
+        ; Scale (SC)
+        defb 'S'                ;fbb8
+        defb 'C'                ;fbb9
+        defb 001h               ;fbba
+        defb 051h               ;fbbb
+        defb 0f1h               ;fbbc
+
+        ; Circle (CR)  
+        defb 'C'                ;fbbd
+        defb 'R'                ;fbbe
+        defb 001h               ;fbbf
+        defb 012h               ;fbc0
+        defb 0f2h               ;fbc1
+
+        ; Arcus (AC)
+        defb 'A'                ;fbc2
+        defb 'C'                ;fbc3
+        defb 003h               ;fbc4
+        defb 070h               ;fbc5
+        defb 0f1h               ;fbc6
+
+        ; Repeat (R)
+        defb 'R'                ;fbc7
+        defb '('                ;fbc8
+        defb 001h               ;fbc9
+        defb 027h               ;fbca
+lfbcbh: defb 0f2h               ;fbcb
+
+        ; Repeat (R)
+        defb 'R'                ;fbcc
+        defb ')'                ;fbcd
+        defb 000h               ;fbce
+        defb 033h               ;fbcf
+        defb 0f2h               ;fbd0
+
+        ; Line Spacing (LS) 
+        defb 'L'                ;fbd1
+        defb 'S'                ;fbd2
+        defb 001h               ;fbd3
+        defb 051h               ;fbd4
+        defb 0f2h               ;fbd5
+
+        ; Home (HM) 
+        defb 'H'                ;fbd6
+        defb 'M'                ;fbd7
+        defb 000h               ;fbd8
+        defb 091h               ;fbd9
+        defb 0f5h               ;fbda
+
+        ; Indicate Corners (IC) 
+        defb 'I'                ;fbdb
+        defb 'C'                ;fbdc
+        defb 000h               ;fbdd
+        defb 0f5h               ;fbde
+        defb 0f2h               ;fbdf
+
+        ; Initiation (IN) 
+        defb 'I'                ;fbe0
+        defb 'N'                ;fbe1
+        defb 000h               ;fbe2
+        defb 057h               ;fbe3
+        defb 0eeh               ;fbe4
+
+        ; Degrees (DG)
+        defb 'D'                ;fbe5
+        defb 'G'                ;fbe6
+        defb 001h               ;fbe7
+        defb 063h               ;fbe8
+        defb 0f1h               ;fbe9
+
+        ; Copy (CP) 
+        defb 'C'                ;fbea
+        defb 'P'                ;fbeb
+        defb 001h               ;fbec
+        defb 01ah               ;fbed
+        defb 0f3h               ;fbee
+
+        ; Line Type (LT)
+        defb 'L'                ;fbef
+        defb 'T'                ;fbf0
+        defb 001h               ;fbf1
+        defb 058h               ;fbf2
+        defb 0f2h               ;fbf3
+
+        ; User Line (UL) 
+        defb 'U'                ;fbf4
+        defb 'L'                ;fbf5
+        defb 000h               ;fbf6
+        defb 092h               ;fbf7
+        defb 0f2h               ;fbf8
+
+        ; ??? (FL) 
+        defb 'F'                ;fbf9
+        defb 'L'                ;fbfa
+        defb 003h               ;fbfb
+        defb 0ceh               ;fbfc
+        defb 0f2h               ;fbfd
+
+        ; Move Free (MF) 
+        defb 'M'                ;fbfe
+        defb 'F'                ;fbff
+        defb 000h               ;fc00
+        defb 068h               ;fc01
+        defb 0ech               ;fc02
+
+; *****************************************************************************
+; * End of Table of Commands
+; *****************************************************************************
+
+        defb 000h               ;fc03   00
+        defb 080h               ;fc04   80 
 	ld h,c			;fc05	61 	a 
 	add a,c			;fc06	81 	. 
 	ld d,e			;fc07	53 	S 

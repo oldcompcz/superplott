@@ -13,4 +13,4 @@ CAL01:   start 0xed88 end 0xed8d type bytedata
 CAL02:   start 0xeda4 end 0xeda9 type bytedata
 CAL03:   start 0xefb5 end 0xefba type bytedata
 CAL04:   start 0xefd4 end 0xefd7 type bytedata
-
+CMDS:    start 0xfb7c end 0xfc03 type bytedata
