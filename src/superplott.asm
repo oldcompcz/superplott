@@ -41,7 +41,9 @@ WHE_X:
 ; *
 ; * Reads cursor (5,6,7,8), 0 = quit, q = run fast
 ; *****************************************************************************
-
+ 
+; Move Free (MF)
+cmd_mf:
 MV_FREE:
         ld a,028h               ;ec68   load 40 into a
         ld (0ecf4h),a           ;ec6a   modify of ld bc,0XX01h at ecf2
@@ -391,8 +393,10 @@ INIT:
         ld bc,00006h            ;ee4e 
         ldir                    ;ee51   copy STRMS 
         out (PORT_LED_RESET),a  ;ee53 
-        out (PORT_LED),a        ;ee55   set led 
-lee57h:
+        out (PORT_LED),a        ;ee55   set led
+        
+; Initiation (IN)
+cmd_in:
         call sub_ee86h          ;ee57   test if led lights 
         ret c                   ;ee5a	return if led lights 
         ld hl,MAX_Y_INIT        ;ee5b   counter = 2000
@@ -489,29 +493,33 @@ leedch:
         call sub_ef0eh          ;eee3   get next char and upper case it
         cp 00dh                 ;eee6   check for ENTER
         jr z,lef61h             ;eee8   clear editing area and restore all regs
-        cp 03ah                 ;eeea   check for ':'
-        jr z,leedch             ;eeec
-        cp 03bh                 ;eeee   check for ';'
-        jr z,leedch             ;eef0
+        cp ':'                  ;eeea   check for ':'
+        jr z,leedch             ;eeec   loop if yes
+        cp ';'                  ;eeee   check for ';'
+        jr z,leedch             ;eef0   loop if yes
+
+                                ;       Read command name 
         ld d,a                  ;eef2   save char
         call sub_ef0eh          ;eef3   get character and upper case it
         ld e,a                  ;eef6   save char
-        ld hl,lfb7ch            ;eef7
+
+                                ;       Search command in table
+        ld hl,cmdtbl            ;eef7   set pointer to table of commands
 leefah:
-        ld a,(hl)               ;eefa
-        or a                    ;eefb
+        ld a,(hl)               ;eefa   read the first char from table
+        or a                    ;eefb   test of zero (end of table)
         jr nz,$+4               ;eefc   inc hl, cp d, ...
 leefeh:
         rst 8                   ;eefe   print error if a = 0
-        ld d,023h               ;eeff
-        cp d                    ;ef01   check for '#' 
-        jr nz,lef08h            ;ef02   skip check for channel no
-        ld a,(hl)               ;ef04
-        cp e                    ;ef05   check for channel no 
-        jr z,lef1ch             ;ef06   jump if channel matches
+        ld d,'#'                ;eeff
+        cp d                    ;ef01   compare first char against table 
+        jr nz,lef08h            ;ef02   skip check if does not match
+        ld a,(hl)               ;ef04   read the second char from table
+        cp e                    ;ef05   compare char against table 
+        jr z,lef1ch             ;ef06   jump if match
 lef08h:
-        inc hl                  ;ef08
-        inc hl                  ;ef09
+        inc hl                  ;ef08   go to next command
+        inc hl                  ;ef09   each command is 5 bytes length
         inc hl                  ;ef0a
         inc hl                  ;ef0b
         jr leefah               ;ef0c   loop
@@ -524,7 +532,7 @@ lef08h:
 sub_ef0eh:
         rst 18h                 ;ef0e   get char from command line
         inc hl                  ;ef0f
-        ld (05c5dh),hl          ;ef10   Address of the next character to be interpreted
+        ld (05c5dh),hl          ;ef10   address of the next character to be interpreted
         cp 061h                 ;ef13   check for 'a'
         ret c                   ;ef15   return if less
         cp 07bh                 ;ef16   check for '{' = 'z' + 1
@@ -532,28 +540,28 @@ sub_ef0eh:
         sub 020h                ;ef19   upper case
         ret                     ;ef1b
 
-; Set channel
+; Read parameters and run command
 lef1ch:
-        inc hl                  ;ef1c	23 	# 
-        ld b,(hl)               ;ef1d	46 	F 
-        inc hl                  ;ef1e	23 	# 
-        ld e,(hl)               ;ef1f	5e 	^ 
-        inc hl                  ;ef20	23 	# 
-        ld d,(hl)               ;ef21	56 	V 
-        push de                 ;ef22	d5 	. 
-        ld a,b                  ;ef23	78 	x 
-        or a                    ;ef24	b7 	. 
-        jr z,lef30h             ;ef25	28 09 	( . 
+        inc hl                  ;ef1c 
+        ld b,(hl)               ;ef1d   read 3rd byte from table (num of params)
+        inc hl                  ;ef1e
+        ld e,(hl)               ;ef1f   read 4th byte from table 
+        inc hl                  ;ef20
+        ld d,(hl)               ;ef21   read 5th byte from table 
+        push de                 ;ef22   put cmd address on stack 
+        ld a,b                  ;ef23 
+        or a                    ;ef24   test if command has any parameter 
+        jr z,lef30h             ;ef25   jump if not 
 lef27h:
-        push bc                 ;ef27	c5 	. 
-        call sub_ef35h          ;ef28	cd 35 ef 	. 5 . 
-        jr z,lef82h             ;ef2b	28 55 	( U 
-        pop bc                  ;ef2d	c1 	. 
-        djnz lef27h             ;ef2e	10 f7 	. . 
+        push bc                 ;ef27	put also 3rd byte on stack  
+        call sub_ef35h          ;ef28 
+        jr z,lef82h             ;ef2b 
+        pop bc                  ;ef2d 
+        djnz lef27h             ;ef2e   loop 
 lef30h:
-        ld hl,leedch            ;ef30	21 dc ee 	! . . 
-        ex (sp),hl              ;ef33	e3 	. 
-        jp (hl)                 ;ef34	e9 	. 
+        ld hl,leedch            ;ef30   back to ENTRY 
+        ex (sp),hl              ;ef33   save return address 
+        jp (hl)                 ;ef34   go to command 
 
 sub_ef35h:
 	xor a			;ef35	af 	. 
@@ -720,15 +728,30 @@ sub_effch:
 	ld bc,002c0h		;effd	01 c0 02 	. . . 
 	rrca			;f000	0f 	. 
 	ld bc,00fe0h		;f001	01 e0 0f 	. . . 
-	ld bc,0c938h		;f004	01 38 c9 	. 8 . 
+	ld bc,0c938h		;f004	01 38 c9 	. 8 .
+ 
+; Vector Absolute (VA)
+cmd_va: 
 	ld a,001h		;f007	3e 01 	> . 
-	jr lefcdh		;f009	18 c2 	. . 
+	jr lefcdh		;f009	18 c2 	. .
+
+; Vector Relative (VR)
+cmd_vr:  
 	ld a,001h		;f00b	3e 01 	> . 
-	jr lefe9h		;f00d	18 da 	. . 
+	jr lefe9h		;f00d	18 da 	. .
+
+; Move Absolute (MA)
+cmd_ma: 
 	xor a			;f00f	af 	. 
-	jr lefcdh		;f010	18 bb 	. . 
+	jr lefcdh		;f010	18 bb 	. .
+
+; Move Relative (MR)
+cmd_mr: 
 	xor a			;f012	af 	. 
-	jr lefe9h		;f013	18 d4 	. . 
+	jr lefe9h		;f013	18 d4 	. .
+
+; Point Absolute (PA)
+cmd_pa: 
 	ld a,002h		;f015	3e 02 	> . 
 	call lefcdh		;f017	cd cd ef 	. . . 
 lf01ah:
@@ -739,14 +762,23 @@ sub_f01fh:
 	ld a,001h		;f01f	3e 01 	> . 
 	call sub_f6d5h		;f021	cd d5 f6 	. . . 
 	xor a			;f024	af 	. 
-	jp sub_f6d5h		;f025	c3 d5 f6 	. . . 
+	jp sub_f6d5h		;f025	c3 d5 f6 	. . .
+
+; Point Relative (PR)
+cmd_pr: 
 	ld a,002h		;f028	3e 02 	> . 
 	call lefe9h		;f02a	cd e9 ef 	. . . 
-	jr lf01ah		;f02d	18 eb 	. . 
+	jr lf01ah		;f02d	18 eb 	. .
+
+; Origin (OG)
+cmd_og: 
 	rst 28h			;f02f	ef 	. 
 	call 0cc02h		;f030	cd 02 cc 	. . . 
 	ld (bc),a			;f033	02 	. 
-	jr c,$-53		;f034	38 c9 	8 . 
+	jr c,$-53		;f034	38 c9 	8 .
+        
+; Define Window (DW)
+cmd_dw: 
 	ld b,002h		;f036	06 02 	. . 
 	ld hl,lfa9ah+1		;f038	21 9b fa 	! . . 
 lf03bh:
@@ -791,6 +823,8 @@ lf064h:
         djnz lf064h             ;f06b
         ret                     ;f06d
  
+ ; Character size (CS)
+ cmd_cs:
 	call sub_ef84h		;f06e	cd 84 ef 	. . . 
 	call sub_ef35h		;f071	cd 35 ef 	. 5 . 
 	jr nz,lf07bh		;f074	20 05 	  . 
@@ -879,7 +913,10 @@ lf103h:
 	ld (lfa8fh+1),hl		;f106	22 90 fa 	" . . 
 	ld (lfa92h),hl		;f109	22 92 fa 	" . . 
 	ld a,001h		;f10c	3e 01 	> . 
-	jr lf0ffh		;f10e	18 ef 	. . 
+	jr lf0ffh		;f10e	18 ef 	. .
+
+; Verify Window (VW)
+cmd_vw: 
 	ld (ix+00ah),000h		;f110	dd 36 0a 00 	. 6 . . 
 	call sub_f143h		;f114	cd 43 f1 	. C . 
 	call sub_f14ah		;f117	cd 4a f1 	. J . 
@@ -904,8 +941,10 @@ sub_f143h:
 sub_f14ah:
 	ld hl,(lfa96h+2)		;f14a	2a 98 fa 	* . . 
 	ld (lfab0h),hl		;f14d	22 b0 fa 	" . . 
-	ret			;f150	c9 	. 
-lf151h:
+	ret			;f150	c9 	.
+
+; Scale (SC)
+cmd_sc: 
 	rst 28h			;f151	ef 	. 
 	rlc d		;f152	cb 02 	. . 
 	jr c,$-53		;f154	38 c9 	8 . 
@@ -917,15 +956,20 @@ sub_f156h:
 	dec b			;f15e	05 	. 
 	and e			;f15f	a3 	. 
 	inc b			;f160	04 	. 
-	jr c,$-53		;f161	38 c9 	8 . 
-lf163h:
+	jr c,$-53		;f161	38 c9 	8 .
+
+; Degrees (DG)
+cmd_dg:
 	call sub_efb4h		;f163	cd b4 ef 	. . . 
 	rrc l		;f166	cb 0d 	. . 
 	sbc a,a			;f168	9f 	. 
 	cpl			;f169	2f 	/ 
 	and 0c9h		;f16a	e6 c9 	. . 
 	ld (sub_f156h),a		;f16c	32 56 f1 	2 V . 
-	ret			;f16f	c9 	. 
+	ret			;f16f	c9 	.
+
+; Arcus (AC)
+cmd_ac: 
 	call sub_f156h		;f170	cd 56 f1 	. V . 
 	rst 28h			;f173	ef 	. 
 	ld bc,0cd38h		;f174	01 38 cd 	. 8 . 
@@ -1016,8 +1060,10 @@ lf1e4h:
 	ld a,004h		;f207	3e 04 	> . 
 	ld (lfa80h),a		;f209	32 80 fa 	2 . . 
 	call sub_f3e9h		;f20c	cd e9 f3 	. . . 
-	jp lefddh		;f20f	c3 dd ef 	. . . 
-lf212h:
+	jp lefddh		;f20f	c3 dd ef 	. . .
+
+; Circle (CR)
+cmd_cr: 
 	rst 28h			;f212	ef 	. 
 	and b			;f213	a0 	. 
 	and b			;f214	a0 	. 
@@ -1026,19 +1072,28 @@ lf212h:
 	pop af			;f218	f1 	. 
 	xor a			;f219	af 	. 
 	jp sub_f6d5h		;f21a	c3 d5 f6 	. . .
-; ??? called from exchange buffers 
-lf21dh:
-        res 7,(ix+002h)         ;f21d
-        ret                     ;f221   return to ENTRY
 
+; Normal Spacing (NS)
+cmd_ns: 
+        res 7,(ix+002h)         ;f21d
+        ret                     ;f221
+
+; Proportional Spacing (PS)
+cmd_ps:
 	set 7,(ix+002h)		;f222	dd cb 02 fe 	. . . . 
-	ret			;f226	c9 	. 
+	ret			;f226	c9 	.
+
+; Repeat (R1)
+cmd_r1: 
 	call sub_efb4h		;f227	cd b4 ef 	. . . 
 	ld hl,(05c5dh)		;f22a	2a 5d 5c 	* ] \ 
 	ex (sp),hl			;f22d	e3 	. 
 	push de			;f22e	d5 	. 
 	inc (ix+000h)		;f22f	dd 34 00 	. 4 . 
-	jp (hl)			;f232	e9 	. 
+	jp (hl)			;f232	e9 	.
+        
+ ; Repeat (R2)
+ cmd_r2:
 	dec (ix+000h)		;f233	dd 35 00 	. 5 . 
 	jp m,lf24fh		;f236	fa 4f f2 	. O . 
 	inc (ix+000h)		;f239	dd 34 00 	. 4 . 
@@ -1062,12 +1117,15 @@ lf24ah:
 lf24fh:
         rst 8                   ;f24f   show error
         add hl,bc               ;f250
-lf251h:
+        
+; Line Spacing (LS)
+cmd_ls:
         call sub_efb4h          ;f251
         ld (ix+006h),l          ;f254	dd 75 06 	. u . 
         ret                     ;f257	c9 	. 
 
-lf258h:
+; Line Type (LT)
+cmd_lt:
 	ld hl,lfc2eh		;f258	21 2e fc 	! . . 
 	ld (lfb10h),hl		;f25b	22 10 fb 	" . . 
 	call sub_efb4h		;f25e	cd b4 ef 	. . . 
@@ -1104,7 +1162,10 @@ lf289h:
 	ld hl,(lfb10h)		;f289	2a 10 fb 	* . . 
 	dec hl			;f28c	2b 	+ 
 	set 7,(hl)		;f28d	cb fe 	. . 
-	jp lf6a3h		;f28f	c3 a3 f6 	. . . 
+	jp lf6a3h		;f28f	c3 a3 f6 	. . .
+        
+; User Line (UL)
+cmd_ul:  
 	ld hl,lfc2eh		;f292	21 2e fc 	! . . 
 	ld (lfb10h),hl		;f295	22 10 fb 	" . . 
 	ld a,0ffh		;f298	3e ff 	> . 
@@ -1143,7 +1204,10 @@ sub_f2bbh:
 	ld (hl),d			;f2c8	72 	r 
 	inc hl			;f2c9	23 	# 
 	ld (lfb10h),hl		;f2ca	22 10 fb 	" . . 
-	ret			;f2cd	c9 	. 
+	ret			;f2cd	c9 	.
+        
+; ??? (FL)
+cmd_fl:  
 	call sub_efb4h		;f2ce	cd b4 ef 	. . . 
 	ld a,e			;f2d1	7b 	{ 
 	ld hl,00014h		;f2d2	21 14 00 	! . . 
@@ -1161,7 +1225,10 @@ lf2ech:
 	inc de			;f2ef	13 	. 
 	ld a,e			;f2f0	7b 	{ 
 	ld (0fa06h),a		;f2f1	32 06 fa 	2 . . 
-	ret			;f2f4	c9 	. 
+	ret			;f2f4	c9 	.
+
+; Indicate Corners (IC)
+cmd_ic:  
 	xor a			;f2f5	af 	. 
 	ld (lfa80h),a		;f2f6	32 80 fa 	2 . . 
 	ld hl,lfaa6h		;f2f9	21 a6 fa 	! . . 
@@ -1173,9 +1240,11 @@ lf2ech:
 	ld hl,lfaa0h+2		;f30b	21 a2 fa 	! . . 
 	call sub_f598h		;f30e	cd 98 f5 	. . . 
 	call sub_f01fh		;f311	cd 1f f0 	. . . 
-	call sub_f591h		;f314	cd 91 f5 	. . . 
-	jp sub_f01fh		;f317	c3 1f f0 	. . . 
-lf31ah:
+	call cmd_hm		;f314	cd 91 f5 	. . . 
+	jp sub_f01fh		;f317	c3 1f f0 	. . .
+        
+; Copy (CP)
+cmd_cp: 
 	rst 28h			;f31a	ef 	. 
 	ex de,hl			;f31b	eb 	. 
 	inc b			;f31c	04 	. 
@@ -1550,8 +1619,10 @@ lf58ah:
 	call m,sub_f539h		;f58b	fc 39 f5 	. 9 . 
 	pop de			;f58e	d1 	. 
 	pop bc			;f58f	c1 	. 
-	ret			;f590	c9 	. 
-sub_f591h:
+	ret			;f590	c9 	.
+        
+; Home (HM)
+cmd_hm: 
 	xor a			;f591	af 	. 
 	ld (lfa80h),a		;f592	32 80 fa 	2 . . 
 	ld hl,lfa9ch		;f595	21 9c fa 	! . . 
@@ -1838,7 +1909,7 @@ sub_f740h:
         ld (lfa8fh),a           ;f766
         call sub_f9c9h          ;f769   ???
         ld (ix+015h),03eh       ;f76c   62 '>'
-        jp lf21dh               ;f770   reset bit 7 at (ix+002h) and return
+        jp cmd_ns               ;f770   reset bit 7 at (ix+002h) and return
 
 ; *****************************************************************************
 ; * LIST
@@ -2216,10 +2287,10 @@ sub_f9c9h:
         dec (ix+015h)           ;fa1a	dd 35 15 	. 5 . 
         ret nz                  ;fa1d	c0 	. 
         ld (ix+015h),03eh       ;fa1e	dd 36 15 3e 	. 6 . > 
-        call sub_f591h          ;fa22	cd 91 f5 	. . . 
+        call cmd_hm          ;fa22	cd 91 f5 	. . . 
         call lf820h             ;fa25	cd 20 f8 	.   . 
         call sub_f740h          ;fa28	cd 40 f7 	. @ . 
-        jp lee57h               ;fa2b	c3 57 ee 	. W . 
+        jp cmd_in               ;fa2b	c3 57 ee 	. W . 
 
 sub_fa2eh:
 	push af			;fa2e	f5 	. 
@@ -2526,7 +2597,7 @@ lfb40h:
 	ld b,h			;fb4c	44 	D 
 	ld b,b			;fb4d	40 	@ 
 	inc a			;fb4e	3c 	< 
-	jr c,lfb85h		;fb4f	38 34 	8 4 
+	jr c,cmdtbl + 2*5 - 1		;fb4f	38 34 	8 4 
 	ld (02e30h),a		;fb51	32 30 2e 	2 0 . 
 	inc l			;fb54	2c 	, 
 	ld hl,(02628h)		;fb55	2a 28 26 	* ( & 
@@ -2563,200 +2634,147 @@ lfb76h:
 ; * Table of Commands
 ; *****************************************************************************
  
-lfb7ch: ; Vector Absolute (VA)
-        defb 'V'                ;fb7c
-        defb 'A'                ;fb7d
-        defb 002h               ;fb7e
-        defb 007h               ;fb7f
-        defb 0f0h               ;fb80
+cmdtbl: ; Vector Absolute (VA)
+        defb "VA"               ;fb7c   name of command 
+        defb 2                  ;fb7e   number of parameters
+        defw cmd_va             ;fb7f   address of command routine
 
         ; Vector Relative (VR) 
-        defb 'V'                ;fb81
-        defb 'R'                ;fb82
-        defb 002h               ;fb83
-        defb 00bh               ;fb84
-lfb85h: defb 0f0h               ;fb85
+        defb "VR"               ;fb81
+        defb 2                  ;fb83
+        defw cmd_vr             ;fb84
 
         ; Move Absolute (MA) 
-        defb 'M'                ;fb86
-        defb 'A'                ;fb87
-        defb 002h               ;fb88
-        defb 00fh               ;fb89
-lfb8ah: defb 0f0h               ;fb8a
+        defb "MA"               ;fb86
+        defb 2                  ;fb88
+        defw cmd_ma             ;fb89
 
         ; Move Relative (MR)
-        defb 'M'                ;fb8b
-        defb 'R'                ;fb8c
-        defb 002h               ;fb8d
-        defb 012h               ;fb8e
-        defb 0f0h               ;fb8f
+        defb "MR"               ;fb8b
+        defb 2                  ;fb8d
+        defw cmd_mr             ;fb8e
 
         ; Point Absolute (PA) 
-        defb 'P'                ;fb90
-        defb 'A'                ;fb91
-        defb 002h               ;fb92
-        defb 015h               ;fb93
-        defb 0f0h               ;fb94
+        defb "PA"               ;fb90
+        defb 2                  ;fb92
+        defw cmd_pa             ;fb93
 
         ; Point Relative (PR)
-        defb 'P'                ;fb95
-        defb 'R'                ;fb96
-        defb 002h               ;fb97
-        defb 028h               ;fb98
-        defb 0f0h               ;fb99
+        defb "PR"               ;fb95
+        defb 2                  ;fb97
+        defw cmd_pr             ;fb98
 
-lfb9ah: ; Character size (CS)
-        defb 'C'                ;fb9a
-        defb 'S'                ;fb9b
-        defb 002h               ;fb9c
-        defb 06eh               ;fb9d
-        defb 0f0h               ;fb9e
+        ; Character size (CS)
+        defb "CS"               ;fb9a
+        defb 2                  ;fb9c
+        defw cmd_cs             ;fb9d
 
         ; Define Window (DW) 
-        defb 'D'                ;fb9f
-        defb 'W'                ;fba0
-        defb 004h               ;fba1
-        defb 036h               ;fba2
-        defb 0f0h               ;fba3
+        defb "DW"               ;fb9f
+        defb 4                  ;fba1
+        defw cmd_dw             ;fba2
 
         ; Verify Window (VW) 
-        defb 'V'                ;fba4
-        defb 'W'                ;fba5
-        defb 000h               ;fba6
-        defb 010h               ;fba7
-        defb 0f1h               ;fba8
+        defb "VW"               ;fba4
+        defb 0                  ;fba6
+        defw cmd_vw             ;fba7
 
         ; Origin (OG)
-        defb 'O'                ;fba9
-        defb 'G'                ;fbaa
-        defb 002h               ;fbab
-        defb 02fh               ;fbac
-        defb 0f0h               ;fbad
+        defb "OG"               ;fba9
+        defb 2                  ;fbab
+        defw cmd_og             ;fbac
 
         ; Proportional Spacing (PS) 
-        defb 'P'                ;fbae
-        defb 'S'                ;fbaf
-        defb 000h               ;fbb0
-        defb 022h               ;fbb1
-        defb 0f2h               ;fbb2
+        defb "PS"               ;fbae
+        defb 0                  ;fbb0
+        defw cmd_ps             ;fbb1
 
         ; Normal Spacing (NS)
-        defb 'N'                ;fbb3
-        defb 'S'                ;fbb4
-        defb 000h               ;fbb5
-        defb 01dh               ;fbb6
-        defb 0f2h               ;fbb7
+        defb "NS"               ;fbb3
+        defb 0                  ;fbb5
+        defw cmd_ns             ;fbb6
 
         ; Scale (SC)
-        defb 'S'                ;fbb8
-        defb 'C'                ;fbb9
-        defb 001h               ;fbba
-        defb 051h               ;fbbb
-        defb 0f1h               ;fbbc
+        defb "SC"               ;fbb8
+        defb 1                  ;fbba
+        defw cmd_sc             ;fbbb
 
         ; Circle (CR)  
-        defb 'C'                ;fbbd
-        defb 'R'                ;fbbe
-        defb 001h               ;fbbf
-        defb 012h               ;fbc0
-        defb 0f2h               ;fbc1
+        defb "CR"               ;fbbd
+        defb 1                  ;fbbf
+        defw cmd_cr             ;fbc0
 
         ; Arcus (AC)
-        defb 'A'                ;fbc2
-        defb 'C'                ;fbc3
-        defb 003h               ;fbc4
-        defb 070h               ;fbc5
-        defb 0f1h               ;fbc6
+        defb "AC"               ;fbc2
+        defb 3                  ;fbc4
+        defw cmd_ac             ;fbc5
 
-        ; Repeat (R)
-        defb 'R'                ;fbc7
-        defb '('                ;fbc8
-        defb 001h               ;fbc9
-        defb 027h               ;fbca
-lfbcbh: defb 0f2h               ;fbcb
+        ; Repeat (R1)
+        defb "R("               ;fbc7
+        defb 1                  ;fbc9
+        defw cmd_r1             ;fbca
 
-        ; Repeat (R)
-        defb 'R'                ;fbcc
-        defb ')'                ;fbcd
-        defb 000h               ;fbce
-        defb 033h               ;fbcf
-        defb 0f2h               ;fbd0
+        ; Repeat (R2)
+        defb "R)"               ;fbcc
+        defb 0                  ;fbce
+        defw cmd_r2             ;fbcf
 
         ; Line Spacing (LS) 
-        defb 'L'                ;fbd1
-        defb 'S'                ;fbd2
-        defb 001h               ;fbd3
-        defb 051h               ;fbd4
-        defb 0f2h               ;fbd5
+        defb "LS"               ;fbd1
+        defb 1                  ;fbd3
+        defw cmd_ls             ;fbd4
 
         ; Home (HM) 
-        defb 'H'                ;fbd6
-        defb 'M'                ;fbd7
-        defb 000h               ;fbd8
-        defb 091h               ;fbd9
-        defb 0f5h               ;fbda
+        defb "HM"               ;fbd6
+        defb 0                  ;fbd8
+        defw cmd_hm             ;fbd9
 
         ; Indicate Corners (IC) 
-        defb 'I'                ;fbdb
-        defb 'C'                ;fbdc
-        defb 000h               ;fbdd
-        defb 0f5h               ;fbde
-        defb 0f2h               ;fbdf
+        defb "IC"               ;fbdb
+        defb 0                  ;fbdd
+        defw cmd_ic             ;fbde
 
         ; Initiation (IN) 
-        defb 'I'                ;fbe0
-        defb 'N'                ;fbe1
-        defb 000h               ;fbe2
-        defb 057h               ;fbe3
-        defb 0eeh               ;fbe4
+        defb "IN"               ;fbe0
+        defb 0                  ;fbe2
+        defw cmd_in             ;fbe3
 
         ; Degrees (DG)
-        defb 'D'                ;fbe5
-        defb 'G'                ;fbe6
-        defb 001h               ;fbe7
-        defb 063h               ;fbe8
-        defb 0f1h               ;fbe9
+        defb "DG"               ;fbe5
+        defb 1                  ;fbe7
+        defw cmd_dg             ;fbe8
 
         ; Copy (CP) 
-        defb 'C'                ;fbea
-        defb 'P'                ;fbeb
-        defb 001h               ;fbec
-        defb 01ah               ;fbed
-        defb 0f3h               ;fbee
+        defb "CP"               ;fbea
+        defb 1                  ;fbec
+        defw cmd_cp             ;fbed
 
         ; Line Type (LT)
-        defb 'L'                ;fbef
-        defb 'T'                ;fbf0
-        defb 001h               ;fbf1
-        defb 058h               ;fbf2
-        defb 0f2h               ;fbf3
+        defb "LT"               ;fbef
+        defb 1                  ;fbf1
+        defw cmd_lt             ;fbf2
 
         ; User Line (UL) 
-        defb 'U'                ;fbf4
-        defb 'L'                ;fbf5
-        defb 000h               ;fbf6
-        defb 092h               ;fbf7
-        defb 0f2h               ;fbf8
+        defb "UL"               ;fbf4
+        defb 0                  ;fbf6
+        defw cmd_ul             ;fbf7
 
         ; ??? (FL) 
-        defb 'F'                ;fbf9
-        defb 'L'                ;fbfa
-        defb 003h               ;fbfb
-        defb 0ceh               ;fbfc
-        defb 0f2h               ;fbfd
+        defb "FL"               ;fbf9
+        defb 3                  ;fbfb
+        defw cmd_fl             ;fbfc
 
         ; Move Free (MF) 
-        defb 'M'                ;fbfe
-        defb 'F'                ;fbff
-        defb 000h               ;fc00
-        defb 068h               ;fc01
-        defb 0ech               ;fc02
+        defb "MF"               ;fbfe
+        defb 0                  ;fc00
+        defw cmd_mf             ;fc01
+
+        defb 000h               ;fc03   End of table
 
 ; *****************************************************************************
 ; * End of Table of Commands
 ; *****************************************************************************
 
-        defb 000h               ;fc03   00
         defb 080h               ;fc04   80 
 	ld h,c			;fc05	61 	a 
 	add a,c			;fc06	81 	. 
