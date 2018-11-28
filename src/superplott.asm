@@ -43,7 +43,7 @@ WHE_X:
 ; *****************************************************************************
 cmd_mf:
         ld a,028h               ;ec68   load 40 into a
-        ld (0ecf4h),a           ;ec6a   modify of ld bc,0XX01h at ecf2
+        ld (mf_wait + 4),a      ;ec6a   modify of ld bc,0XX01h at ecf2
                                 ;       waiting interval?
 
 ; Reading keyboard:
@@ -176,7 +176,7 @@ mf_quit:
 ; Move free: quickly
 mf_quickly:
         xor a                   ;ed39   a = 0
-        ld (0ecf4h),a           ;ed3a   modify of ld bc,0XX01h at ecf2 
+        ld (mf_wait + 4),a      ;ed3a   modify of ld bc,0XX01h at ecf2 
         ret                     ;ed3d
 
 ; Move free: move y
@@ -237,8 +237,8 @@ PUTX:
         defb 038h               ;ed8c   end-calc
 led8dh:
         pop hl                  ;ed8d
-        ld hl,05c92h            ;ed8e
-        ld (05c68h),hl          ;ed91
+        ld hl,05c92h            ;ed8e   calculator's memory area
+        ld (05c68h),hl          ;ed91   address of area used for calculator's memory
         or a                    ;ed94
         ret                     ;ed95
 
