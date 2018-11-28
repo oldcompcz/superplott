@@ -397,13 +397,13 @@ INIT:
 ; *****************************************************************************
 cmd_in:
         call sub_ee86h          ;ee57   test if led lights 
-        ret c                   ;ee5a	return if led lights 
+        ret c                   ;ee5a   return if led lights 
         ld hl,MAX_Y_INIT        ;ee5b   counter = 2000
 lee5eh:
-        out (PORT_YM),a         ;ee5e	move y- 
+        out (PORT_YM),a         ;ee5e   move y- 
 lee60h:
-        djnz lee60h             ;ee60	waiting loop 256 x 
-        call sub_ee86h          ;ee62	test if led lights 
+        djnz lee60h             ;ee60   waiting loop 256 x 
+        call sub_ee86h          ;ee62   test if led lights 
         jr c,lee6dh             ;ee65   jump if led lights 
         dec hl                  ;ee67   dec counter 
         ld a,h                  ;ee68
@@ -458,7 +458,7 @@ ENTRY:
         jr nz,leea3h            ;ee9f
         ld a,02ch               ;eea1   then replace it for ','
 leea3h:
-        ld hl,(D009+1)          ;eea3   load pointer to command buffer 
+        ld hl,(D009+1)          ;eea3   load pointer to end of command buffer 
         ld (hl),a               ;eea6   insert character to buffer
         inc hl                  ;eea7   increase pointer
         ld (D009+1),hl          ;eea8   save pointer
@@ -466,14 +466,14 @@ leea3h:
         ld a,h                  ;eeac 
         cp 05ch                 ;eead   check for buffer overflow? 
         jr c,leeb7h             ;eeaf 
-        dec h                   ;eeb1   if bufer overflowed decrease about 1
+        dec h                   ;eeb1   decrease about 1 if bufer overflowed
         ld (D009+1),hl          ;eeb2   save pointer
         rst 8                   ;eeb5   error message 
         rrca                    ;eeb6
 leeb7h:
         ex af,af'               ;eeb7   restore register a
         cp 00dh                 ;eeb8   test for ENTER 
-        jp nz,lef75h            ;eeba   restore all registers and return for next char !!!
+        jp nz,lef75h            ;eeba   restore all regs and return from ENTRY for next char
         ld ix,D010              ;eebd
         ld (ix+000h),000h       ;eec1
         ld hl,(05c5dh)          ;eec5   address of the next character to be interpreted
@@ -486,7 +486,7 @@ leeb7h:
         xor a                   ;eed8
         call sub_f721h          ;eed9   exchange buffers
 leedch:
-        call sub_f811h          ;eedc   some I/O operations ???
+        call sub_f811h          ;eedc   keyboard reading ???
         xor a                   ;eedf
         ld (lef36h),a           ;eee0
         call sub_ef0eh          ;eee3   get next char and upper case it
@@ -552,8 +552,8 @@ lef1ch:
         or a                    ;ef24   test if command has any parameter 
         jr z,lef30h             ;ef25   jump if not 
 lef27h:
-        push bc                 ;ef27	put also 3rd byte on stack  
-        call sub_ef35h          ;ef28 
+        push bc                 ;ef27   put also 3rd byte on stack  
+        call sub_ef35h          ;ef28   read next parameter
         jr z,lef82h             ;ef2b 
         pop bc                  ;ef2d 
         djnz lef27h             ;ef2e   loop 
@@ -562,38 +562,45 @@ lef30h:
         ex (sp),hl              ;ef33   save return address 
         jp (hl)                 ;ef34   go to command 
 
+; Read command parameter
 sub_ef35h:
-	xor a			;ef35	af 	. 
+        xor a                   ;ef35
 lef36h:
-        defb 000h               ;ef36	00 	. 
-	call sub_ef42h		;ef37	cd 42 ef 	. B . 
-	ret nz			;ef3a	c0 	. 
-	ld a,0c9h		;ef3b	3e c9 	> . 
-	ld (lef36h),a		;ef3d	32 36 ef 	2 6 . 
-	ret			;ef40	c9 	. 
+        defb 000h               ;ef36   modyfied opcode !!! (nop or ret)
+        call sub_ef42h          ;ef37
+        ret nz                  ;ef3a
+        ld a,0c9h               ;ef3b   ret opcode
+        ld (lef36h),a           ;ef3d
+        ret                     ;ef40
+
+; Next param after ','
 lef41h:
-	rst 20h			;ef41	e7 	. 
+        rst 20h                 ;ef41   fetch the next immediate character 
+                                ;       following the current valid character
+
+; Read param
 sub_ef42h:
-	rst 18h			;ef42	df 	. 
-	cp 00dh		;ef43	fe 0d 	. . 
-	ret z			;ef45	c8 	. 
-	cp 03ah		;ef46	fe 3a 	. : 
-	ret z			;ef48	c8 	. 
-	cp 03bh		;ef49	fe 3b 	. ; 
-	ret z			;ef4b	c8 	. 
-	cp 02ch		;ef4c	fe 2c 	. , 
-	jr z,lef41h		;ef4e	28 f1 	( . 
-	cp 02dh		;ef50	fe 2d 	. - 
-	push af			;ef52	f5 	. 
-	call z,00020h		;ef53	cc 20 00 	.   . 
-	rst 18h			;ef56	df 	. 
-	call 02c9bh		;ef57	cd 9b 2c 	. . , 
-	pop af			;ef5a	f1 	. 
-	ret nz			;ef5b	c0 	. 
-	rst 28h			;ef5c	ef 	. 
-	dec de			;ef5d	1b 	. 
-	jr c,$+22		;ef5e	38 14 	8 . 
-	ret			;ef60	c9 	.
+        rst 18h                 ;ef42   get char from command line
+        cp 00dh                 ;ef43   is char ENTER ?
+        ret z                   ;ef45   return if yes
+        cp ':'                  ;ef46   is char ':' ?
+        ret z                   ;ef48   return if yes
+        cp ';'                  ;ef49   is char ';' ? 
+        ret z                   ;ef4b   return if yes
+        cp ','                  ;ef4c   is char ',' ?
+        jr z,lef41h             ;ef4e   jump if yes 
+        cp '-'                  ;ef50   is char '-' ?
+        push af                 ;ef52   save char 
+        call z,00020h           ;ef53   call Collect next character 
+        rst 18h                 ;ef56   get char from command line 
+        call 02c9bh             ;ef57   decimal to floating point 
+        pop af                  ;ef5a   restore char
+        ret nz                  ;ef5b
+        rst 28h                 ;ef5c   call fp calculator
+        defb 01bh               ;ef5d   -2 pi
+        defb 038h               ;ef5e   end-calc
+        inc d                   ;ef5f
+        ret                     ;ef60
 
 ; Clear editing area
 lef61h:
@@ -620,17 +627,22 @@ lef75h:
         pop de                  ;ef7f
         pop hl                  ;ef80
         ret                     ;ef81
- 
+
+; Last parameter
 lef82h:
-	rst 8			;ef82	cf 	. 
-	add hl,de			;ef83	19 	. 
+        rst 8                   ;ef82   show error 
+        add hl,de               ;ef83
 sub_ef84h:
-	rst 28h			;ef84	ef 	. 
-	ex de,hl			;ef85	eb 	. 
-	inc b			;ef86	04 	. 
-lef87h:
-	ld bc,004ebh		;ef87	01 eb 04 	. . . 
-	ld bc,0c938h		;ef8a	01 38 c9 	. 8 . 
+        rst 28h                 ;ef84   call fp calculator
+        defb 0ebh               ;ef85   eb
+        defb 004h               ;ef86   04
+        defb 001h               ;ef87   01
+        defb 0ebh               ;ef88   eb
+        defb 004h               ;ef89   04
+        defb 001h               ;ef8a   01
+        defb 038h               ;ef8b   38
+        ret                     ;ef8c
+
 sub_ef8dh:
 	call sub_eff7h		;ef8d	cd f7 ef 	. . . 
 	push hl			;ef90	e5 	. 
@@ -640,14 +652,15 @@ sub_ef8dh:
 
 ; Calculator 
 sub_ef98h:
-	push de			;ef98	d5 	. 
-	rst 28h			;ef99	ef 	. 
-	jr c,lef87h		;ef9a	38 eb 	8 . 
-	pop de			;ef9c	d1 	. 
-	ld c,000h		;ef9d	0e 00 	. . 
-	bit 7,d		;ef9f	cb 7a 	. z 
-	jr z,lefa4h		;efa1	28 01 	( . 
-	dec c			;efa3	0d 	. 
+        push de                 ;ef98   d5 	. 
+        rst 28h                 ;ef99   call fp calculator
+        defb 038h               ;ef9a   end-calc
+        ex de,hl                ;ef9b   eb 	8 . 
+        pop de                  ;ef9c   d1 	. 
+        ld c,000h               ;ef9d   0e 00 	. . 
+        bit 7,d                 ;ef9f   cb 7a 	. z 
+        jr z,lefa4h             ;efa1   28 01 	( . 
+        dec c                   ;efa3   0d 	. 
 lefa4h:
 	ld (hl),000h		;efa4	36 00 	6 . 
 lefa6h:
@@ -1475,7 +1488,8 @@ sub_f3e9h:
 lf451h:
         ld hl,lfaaeh            ;f451	21 ae fa 	! . . 
         ld de,D006_whe_x        ;f454	11 aa fa 	. . . 
-        call cpy4bytes          ;f457	cd 70 f4 	. p . 
+        call cpy4bytes          ;f457	cd 70 f4 	. p .
+; Produces sound ??? 
 sub_f45ah:
         ld a,(lfa7fh)           ;f45a	3a 7f fa 	:  . 
         rlca                    ;f45d	07 	. 
@@ -2073,40 +2087,41 @@ lf803h:
 	call sub_f899h		;f80a	cd 99 f8 	. . . 
 	res 0,(ix+018h)		;f80d	dd cb 18 86 	. . . .
 
-; ??? called from ENTRY
+; ??? Keyboard reading
 sub_f811h:
-        ld a,07fh               ;f811	3e 7f 	>  
-        in a,(0feh)             ;f813	db fe 	. . 
-        rrca                    ;f815	0f 	. 
-        ret c                   ;f816	d8 	. 
-        ld a,0feh               ;f817	3e fe 	> . 
-        in a,(0feh)             ;f819	db fe 	. . 
-        rrca                    ;f81b	0f 	. 
-        jr c,lf820h             ;f81c	38 02 	8 . 
-        rst 8                   ;f81e	cf 	. 
-        inc d                   ;f81f	14 	. 
+        ld a,07fh               ;f811 
+        in a,(0feh)             ;f813   reading keyboard port 7ffe 
+        rrca                    ;f815   0x7ffe  SPACE, SYM SHFT, M, N, B 
+        ret c                   ;f816   test for B
+        ld a,0feh               ;f817 
+        in a,(0feh)             ;f819   reading keyboard port fefe 
+        rrca                    ;f81b   0xfefe  SHIFT, Z, X, C, V
+        jr c,lf820h             ;f81c   test for V and skip over rst 8
+        rst 8                   ;f81e 
+        inc d                   ;f81f 
 lf820h:
-        ld a,007h               ;f820	3e 07 	> . 
-        ex af,af'               ;f822	08 	. 
+        ld a,007h               ;f820 
+        ex af,af'               ;f822 
 lf823h:
-        ld a,031h               ;f823	3e 31 	> 1 
+        ld a,031h               ;f823 
 lf825h:
-        dec a                   ;f825	3d 	= 
-        inc hl                  ;f826	23 	# 
-        dec hl                  ;f827	2b 	+ 
-        jr nz,lf825h            ;f828	20 fb 	  . 
-        ld a,080h               ;f82a	3e 80 	> . 
-        in a,(0feh)             ;f82c	db fe 	. . 
-        cpl                     ;f82e	2f 	/ 
-        and 01fh                ;f82f	e6 1f 	. . 
-        ex af,af'               ;f831	08 	. 
-        inc a                   ;f832	3c 	< 
-        and 007h                ;f833	e6 07 	. . 
-        out (0feh),a            ;f835	d3 fe 	. . 
-        ex af,af'               ;f837	08 	. 
-        jr z,lf823h             ;f838	28 e9 	( . 
-        call sub_f45ah          ;f83a	cd 5a f4 	. Z . 
-        jr sub_f811h            ;f83d	18 d2 	. . 
+        dec a                   ;f825 
+        inc hl                  ;f826 
+        dec hl                  ;f827 
+        jr nz,lf825h            ;f828   loop 
+        ld a,080h               ;f82a 
+        in a,(0feh)             ;f82c 
+        cpl                     ;f82e   complement 
+        and 01fh                ;f82f 
+        ex af,af'               ;f831 
+        inc a                   ;f832 
+        and 007h                ;f833 
+        out (0feh),a            ;f835   produces sound or border color 
+        ex af,af'               ;f837 
+        jr z,lf823h             ;f838 
+        call sub_f45ah          ;f83a   produces sound or border color
+        jr sub_f811h            ;f83d   loop
+
 lf83fh:
         jr nz,lf855h            ;f83f	20 14 	  . 
         bit 1,(ix+018h)         ;f841	dd cb 18 4e 	. . . N 
