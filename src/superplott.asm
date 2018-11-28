@@ -634,13 +634,13 @@ lef82h:
         add hl,de               ;ef83
 sub_ef84h:
         rst 28h                 ;ef84   call fp calculator
-        defb 0ebh               ;ef85   eb
-        defb 004h               ;ef86   04
-        defb 001h               ;ef87   01
-        defb 0ebh               ;ef88   eb
-        defb 004h               ;ef89   04
-        defb 001h               ;ef8a   01
-        defb 038h               ;ef8b   38
+        defb 0ebh               ;ef85   get |f|
+        defb 004h               ;ef86   multiply
+        defb 001h               ;ef87   exchange (larger number is on top)
+        defb 0ebh               ;ef88   get |f|
+        defb 004h               ;ef89   multiply
+        defb 001h               ;ef8a   exchange (larger number is on top)
+        defb 038h               ;ef8b   end-calc
         ret                     ;ef8c
 
 sub_ef8dh:
