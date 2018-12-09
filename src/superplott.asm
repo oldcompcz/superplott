@@ -736,11 +736,17 @@ sub_eff7h:
 	inc hl			;effa	23 	# 
 	ret			;effb	c9 	. 
 sub_effch:
-	rst 28h			;effc	ef 	. 
-	ld bc,002c0h		;effd	01 c0 02 	. . . 
-	rrca			;f000	0f 	. 
-	ld bc,00fe0h		;f001	01 e0 0f 	. . . 
-	ld bc,0c938h		;f004	01 38 c9 	. 8 .
+        rst 28h                 ;effc   call fp calculator
+        defb 001h               ;effd   exchange (larger number is on top)
+        defb 0c0h               ;effe
+        defb 002h               ;efff   delete
+        defb 00fh               ;f000   add
+        defb 001h               ;f001   exchange (larger number is on top)
+        defb 0e0h               ;f002
+        defb 00fh               ;f003   add
+        defb 001h               ;f004   exchange (larger number is on top)
+        defb 038h               ;f005   end-calc
+        ret                     ;f006
  
 ; *****************************************************************************
 ; * Vector Absolute
@@ -805,47 +811,52 @@ cmd_pr:
 ; * PRINT #4; "OG"; N1,N2
 ; *****************************************************************************
 cmd_og: 
-	rst 28h			;f02f	ef 	. 
-	call 0cc02h		;f030	cd 02 cc 	. . . 
-	ld (bc),a			;f033	02 	. 
-	jr c,$-53		;f034	38 c9 	8 .
-        
+        rst 28h                 ;f02f   call fp calculator
+        defb 0cdh               ;f030   set cos 8
+        defb 002h               ;f031   delete
+        defb 0cch               ;f032
+        defb 002h               ;f033   delete
+        defb 038h               ;f034   end-calc
+        ret                     ;f035
+
 ; *****************************************************************************
 ; * Define Window
 ; * PRINT #4; "DW"; N1,N2,N3,N4
 ; *****************************************************************************
 cmd_dw: 
-	ld b,002h		;f036	06 02 	. . 
-	ld hl,lfa9ah+1		;f038	21 9b fa 	! . . 
+        ld b,002h               ;f036	06 02 	. . 
+        ld hl,lfa9ah+1          ;f038	21 9b fa 	! . . 
 lf03bh:
-	push bc			;f03b	c5 	. 
-	push hl			;f03c	e5 	. 
-	call sub_ef84h		;f03d	cd 84 ef 	. . . 
-	rst 28h			;f040	ef 	. 
-	defb 0edh              ;next byte illegal after ed		;f041	ed 	. 
-	rrca			;f042	0f 	. 
-	ld bc,00fech		;f043	01 ec 0f 	. . . 
-	ld bc,0cd38h		;f046	01 38 cd 	. 8 . 
-	or h			;f049	b4 	. 
-	rst 28h			;f04a	ef 	. 
-	pop hl			;f04b	e1 	. 
-	ld (hl),d			;f04c	72 	r 
-	dec hl			;f04d	2b 	+ 
-	ld (hl),e			;f04e	73 	s 
-	dec hl			;f04f	2b 	+ 
-	push hl			;f050	e5 	. 
-	call sub_efb4h		;f051	cd b4 ef 	. . . 
-	pop hl			;f054	e1 	. 
-	ld (hl),d			;f055	72 	r 
-	dec hl			;f056	2b 	+ 
-	ld (hl),e			;f057	73 	s 
-	dec hl			;f058	2b 	+ 
-	pop bc			;f059	c1 	. 
-	djnz lf03bh		;f05a	10 df 	. . 
-	ld hl,lfa96h+2		;f05c	21 98 fa 	! . . 
-	ld de,lfa96h		;f05f	11 96 fa 	. . . 
+        push bc                 ;f03b	c5 	. 
+        push hl                 ;f03c	e5 	. 
+        call sub_ef84h          ;f03d	cd 84 ef 	. . . 
+        rst 28h                 ;f040   call fp calculator 
+        defb 0edh               ;f041   get COS 8 (??? cannot read it from doc)
+        defb 00fh               ;f042   add
+        defb 001h               ;f043   exchange (larger number is on top)
+        defb 0ech               ;f044   get |m|
+        defb 00fh               ;f045   add
+        defb 001h               ;f046   exchange (larger number is on top)
+        defb 038h               ;f047   end-calc
+        call sub_efb4h          ;f048	cd b4 ef 	. . . 
+        pop hl                  ;f04b	e1 	. 
+        ld (hl),d               ;f04c	72 	r 
+        dec hl                  ;f04d	2b 	+ 
+        ld (hl),e               ;f04e	73 	s 
+        dec hl                  ;f04f	2b 	+ 
+        push hl                 ;f050	e5 	. 
+        call sub_efb4h          ;f051	cd b4 ef 	. . . 
+        pop hl                  ;f054	e1 	. 
+        ld (hl),d               ;f055	72 	r 
+        dec hl                  ;f056	2b 	+ 
+        ld (hl),e               ;f057	73 	s 
+        dec hl                  ;f058	2b 	+ 
+        pop bc                  ;f059	c1 	. 
+        djnz lf03bh             ;f05a	10 df 	. . 
+        ld hl,lfa96h+2          ;f05c	21 98 fa 	! . . 
+        ld de,lfa96h            ;f05f	11 96 fa 	. . . 
 sub_f062h:
-	ld b,002h		;f062	06 02 	. .
+        ld b,002h               ;f062	06 02 	. .
 
 ; Exchnge memory areas (provide hl as src, de as dest and b as count)
 lf064h:
