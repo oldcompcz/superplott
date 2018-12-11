@@ -1002,173 +1002,229 @@ lf103h:
 ; * PRINT #4; "VW"
 ; *****************************************************************************
 cmd_vw: 
-	ld (ix+00ah),000h		;f110	dd 36 0a 00 	. 6 . . 
-	call sub_f143h		;f114	cd 43 f1 	. C . 
-	call sub_f14ah		;f117	cd 4a f1 	. J . 
-	call sub_f3e9h		;f11a	cd e9 f3 	. . . 
-	ld (ix+00ah),001h		;f11d	dd 36 0a 01 	. 6 . . 
-	ld hl,(lfa96h)		;f121	2a 96 fa 	* . . 
-	ld (lfaaeh),hl		;f124	22 ae fa 	" . . 
-	call sub_f3e9h		;f127	cd e9 f3 	. . . 
-	ld hl,(lfa9ah)		;f12a	2a 9a fa 	* . . 
-	ld (lfab0h),hl		;f12d	22 b0 fa 	" . . 
-	call sub_f3e9h		;f130	cd e9 f3 	. . . 
-	call sub_f143h		;f133	cd 43 f1 	. C . 
-	call sub_f3e9h		;f136	cd e9 f3 	. . . 
-	call sub_f14ah		;f139	cd 4a f1 	. J . 
-	call sub_f3e9h		;f13c	cd e9 f3 	. . . 
-	xor a			;f13f	af 	. 
-	jp sub_f6d5h		;f140	c3 d5 f6 	. . . 
+        ld (ix+00ah),000h       ;f110	dd 36 0a 00 	. 6 . . 
+        call sub_f143h          ;f114	cd 43 f1 	. C . 
+        call sub_f14ah          ;f117	cd 4a f1 	. J . 
+        call sub_f3e9h          ;f11a	cd e9 f3 	. . . 
+        ld (ix+00ah),001h       ;f11d	dd 36 0a 01 	. 6 . . 
+        ld hl,(lfa96h)          ;f121	2a 96 fa 	* . . 
+        ld (lfaaeh),hl          ;f124	22 ae fa 	" . . 
+        call sub_f3e9h          ;f127	cd e9 f3 	. . . 
+        ld hl,(lfa9ah)          ;f12a	2a 9a fa 	* . . 
+        ld (lfab0h),hl          ;f12d	22 b0 fa 	" . . 
+        call sub_f3e9h          ;f130	cd e9 f3 	. . . 
+        call sub_f143h          ;f133	cd 43 f1 	. C . 
+        call sub_f3e9h          ;f136	cd e9 f3 	. . . 
+        call sub_f14ah          ;f139	cd 4a f1 	. J . 
+        call sub_f3e9h          ;f13c	cd e9 f3 	. . . 
+        xor a                   ;f13f	af 	. 
+        jp sub_f6d5h            ;f140	c3 d5 f6 	. . . 
 sub_f143h:
-	ld hl,(lfa94h)		;f143	2a 94 fa 	* . . 
-	ld (lfaaeh),hl		;f146	22 ae fa 	" . . 
-	ret			;f149	c9 	. 
+        ld hl,(lfa94h)          ;f143	2a 94 fa 	* . . 
+        ld (lfaaeh),hl          ;f146	22 ae fa 	" . . 
+        ret                     ;f149	c9 	. 
 sub_f14ah:
-	ld hl,(lfa96h+2)		;f14a	2a 98 fa 	* . . 
-	ld (lfab0h),hl		;f14d	22 b0 fa 	" . . 
-	ret			;f150	c9 	.
+        ld hl,(lfa96h+2)        ;f14a	2a 98 fa 	* . . 
+        ld (lfab0h),hl          ;f14d	22 b0 fa 	" . . 
+        ret                     ;f150	c9 	.
 
 ; *****************************************************************************
 ; * Scale
 ; * PRINT #4; "SC"; N
 ; *****************************************************************************
 cmd_sc: 
-	rst 28h			;f151	ef 	. 
-	rlc d		;f152	cb 02 	. . 
-	jr c,$-53		;f154	38 c9 	8 . 
+        rst 28h                 ;f151   call fp calculator 
+        defb 0cbh               ;f152
+        defb 002h               ;f153
+        defb 038h               ;f154   end-calc
+        ret                     ;f155	c9 	.	.
 sub_f156h:
-	ret			;f156	c9 	. 
-	ld de,0005ah		;f157	11 5a 00 	. Z . 
-	call sub_ef98h		;f15a	cd 98 ef 	. . . 
-	rst 28h			;f15d	ef 	. 
-	dec b			;f15e	05 	. 
-	and e			;f15f	a3 	. 
-	inc b			;f160	04 	. 
-	jr c,$-53		;f161	38 c9 	8 .
+        ret                     ;f156	c9 	. 
+        ld de,0005ah            ;f157	11 5a 00 	. Z . 
+        call sub_ef98h          ;f15a	cd 98 ef 	. . . 
+        rst 28h                 ;f15d   call fp calculator
+        defb 005h               ;f15e
+        defb 0a3h               ;f15f
+        defb 004h               ;f160
+        defb 038h               ;f161   end-calc
+        ret                     ;f162	c9 	.
 
 ; *****************************************************************************
 ; * Degrees
 ; * PRINT #4; "DG"; N
 ; *****************************************************************************
 cmd_dg:
-	call sub_efb4h		;f163	cd b4 ef 	. . . 
-	rrc l		;f166	cb 0d 	. . 
-	sbc a,a			;f168	9f 	. 
-	cpl			;f169	2f 	/ 
-	and 0c9h		;f16a	e6 c9 	. . 
-	ld (sub_f156h),a		;f16c	32 56 f1 	2 V . 
-	ret			;f16f	c9 	.
+        call sub_efb4h          ;f163	cd b4 ef 	. . . 
+        rrc l                   ;f166	cb 0d 	. . 
+        sbc a,a                 ;f168	9f 	. 
+        cpl                     ;f169	2f 	/ 
+        and 0c9h                ;f16a	e6 c9 	. . 
+        ld (sub_f156h),a        ;f16c	32 56 f1 	2 V . 
+        ret                     ;f16f	c9 	.
 
 ; *****************************************************************************
 ; * Arcus
 ; * PRINT #4; "AC"; N1,N2,N3
 ; *****************************************************************************
 cmd_ac: 
-	call sub_f156h		;f170	cd 56 f1 	. V . 
-	rst 28h			;f173	ef 	. 
-	ld bc,0cd38h		;f174	01 38 cd 	. 8 . 
-	ld d,(hl)			;f177	56 	V 
-	pop af			;f178	f1 	. 
-	rst 28h			;f179	ef 	. 
-	jp z,00103h		;f17a	ca 03 01 	. . . 
-	ret			;f17d	c9 	. 
-	ex de,hl			;f17e	eb 	. 
-	inc b			;f17f	04 	. 
-	add hl,hl			;f180	29 	) 
-	rst 0			;f181	c7 	. 
-	inc b			;f182	04 	. 
-	ret z			;f183	c8 	. 
-	and e			;f184	a3 	. 
-	ld sp,0310fh		;f185	31 0f 31 	1 . 1 
-	rrca			;f188	0f 	. 
-	add a,005h		;f189	c6 05 	. . 
-	daa			;f18b	27 	' 
-	and 004h		;f18c	e6 04 	. . 
-	ret pe			;f18e	e8 	. 
-	ld bc,03103h		;f18f	01 03 31 	. . 1 
-	nop			;f192	00 	. 
-	inc bc			;f193	03 	. 
-	ld (bc),a			;f194	02 	. 
-	and 0c8h		;f195	e6 c8 	. . 
-	jp (hl)			;f197	e9 	. 
-	ld hl,(0ebc9h)		;f198	2a c9 eb 	* . . 
-	inc b			;f19b	04 	. 
-	ld hl,(0a131h)		;f19c	2a 31 a1 	* 1 . 
-	inc bc			;f19f	03 	. 
-	ld bc,02305h		;f1a0	01 05 23 	. . # 
-	dec b			;f1a3	05 	. 
-	and c			;f1a4	a1 	. 
-	rrca			;f1a5	0f 	. 
-	daa			;f1a6	27 	' 
-	add a,0e8h		;f1a7	c6 e8 	. . 
-	ld bc,0e705h		;f1a9	01 05 e7 	. . . 
-	inc b			;f1ac	04 	. 
-	ld sp,0c820h		;f1ad	31 20 c8 	1   . 
-	ld (bc),a			;f1b0	02 	. 
-	rra			;f1b1	1f 	. 
-	rst 0			;f1b2	c7 	. 
-	ld (bc),a			;f1b3	02 	. 
-	call pe,038edh		;f1b4	ec ed 38 	. . 8 
-	ld hl,D006_whe_x		;f1b7	21 aa fa 	! . . 
-	call sub_ef8dh		;f1ba	cd 8d ef 	. . . 
-	rst 28h			;f1bd	ef 	. 
-	call 0cc02h		;f1be	cd 02 cc 	. . . 
-	ld (bc),a			;f1c1	02 	. 
-	jp (hl)			;f1c2	e9 	. 
-	ld sp,020eah		;f1c3	31 ea 20 	1 .   
-	inc b			;f1c6	04 	. 
-	ret			;f1c7	c9 	. 
-	ld bc,01feah		;f1c8	01 ea 1f 	. . . 
-	inc b			;f1cb	04 	. 
-	jp z,03e38h		;f1cc	ca 38 3e 	. 8 > 
-	inc b			;f1cf	04 	. 
-	call lefcdh		;f1d0	cd cd ef 	. . . 
-	rst 28h			;f1d3	ef 	. 
-	jp (hl)			;f1d4	e9 	. 
-	ld sp,004e8h		;f1d5	31 e8 04 	1 . . 
-	jp pe,004e7h		;f1d8	ea e7 04 	. . . 
-	inc bc			;f1db	03 	. 
-	ret			;f1dc	c9 	. 
-	ld bc,004e7h		;f1dd	01 e7 04 	. . . 
-	jp pe,004e8h		;f1e0	ea e8 04 	. . . 
-	rrca			;f1e3	0f 	. 
-lf1e4h:
-	jp z,0cd38h		;f1e4	ca 38 cd 	. 8 . 
-	rlca			;f1e7	07 	. 
-	ret p			;f1e8	f0 	. 
-	rst 28h			;f1e9	ef 	. 
-	and 0a1h		;f1ea	e6 a1 	. . 
-	inc bc			;f1ec	03 	. 
-	add a,037h		;f1ed	c6 37 	. 7 
-	nop			;f1ef	00 	. 
-	call po,001edh		;f1f0	e4 ed 01 	. . . 
-	call 00102h		;f1f3	cd 02 01 	. . . 
-	call pe,0cc01h		;f1f6	ec 01 cc 	. . . 
-	ld (bc),a			;f1f9	02 	. 
-	jr c,$-49		;f1fa	38 cd 	8 . 
-	or h			;f1fc	b4 	. 
-	rst 28h			;f1fd	ef 	. 
-	ld (lfaaeh),hl		;f1fe	22 ae fa 	" . . 
-	call sub_efb4h		;f201	cd b4 ef 	. . . 
-	ld (lfab0h),hl		;f204	22 b0 fa 	" . . 
-	ld a,004h		;f207	3e 04 	> . 
-	ld (D010+00ah),a		;f209	32 80 fa 	2 . . 
-	call sub_f3e9h		;f20c	cd e9 f3 	. . . 
-	jp lefddh		;f20f	c3 dd ef 	. . .
+        call sub_f156h          ;f170	cd 56 f1 	. V . 
+        rst 28h                 ;f173   call fp calculator
+
+        defb 001h               ;f174
+        
+        defb 038h               ;f175   end-calc
+        call sub_f156h          ;f176	cd 56 f1 	. V .
+sub_f179h: 
+        rst 28h                 ;f179   call fp calculator
+
+        defb 0cah               ;f17a
+        defb 003h               ;f17b
+        defb 001h               ;f17c
+        defb 0c9h               ;f17d
+        defb 0ebh               ;f17e
+        defb 004h               ;f17f
+        defb 029h               ;f180
+        defb 0c7h               ;f181
+        defb 004h               ;f182
+        defb 0c8h               ;f183
+        defb 0a3h               ;f184
+        defb 031h               ;f185
+        defb 00fh               ;f186
+        defb 031h               ;f187
+        defb 00fh               ;f188
+        defb 0c6h               ;f189
+        defb 005h               ;f18a
+        defb 027h               ;f18b
+        defb 0e6h               ;f18c
+        defb 004h               ;f18d
+        defb 0e8h               ;f18e
+        defb 001h               ;f18f
+        defb 003h               ;f190
+        defb 031h               ;f191
+        defb 000h               ;f192
+        defb 003h               ;f193
+        defb 002h               ;f194
+        defb 0e6h               ;f195
+        defb 0c8h               ;f196
+        defb 0e9h               ;f197
+        defb 02ah               ;f198
+        defb 0c9h               ;f199
+        defb 0ebh               ;f19a
+        defb 004h               ;f19b
+        defb 02ah               ;f19c
+        defb 031h               ;f19d
+        defb 0a1h               ;f19e
+        defb 003h               ;f19f
+        defb 001h               ;f1a0
+        defb 005h               ;f1a1
+        defb 023h               ;f1a2
+        defb 005h               ;f1a3
+        defb 0a1h               ;f1a4
+        defb 00fh               ;f1a5
+        defb 027h               ;f1a6
+        defb 0c6h               ;f1a7
+        defb 0e8h               ;f1a8
+        defb 001h               ;f1a9
+        defb 005h               ;f1aa
+        defb 0e7h               ;f1ab
+        defb 004h               ;f1ac
+        defb 031h               ;f1ad
+        defb 020h               ;f1ae
+        defb 0c8h               ;f1af
+        defb 002h               ;f1b0
+        defb 01fh               ;f1b1
+        defb 0c7h               ;f1b2
+        defb 002h               ;f1b3
+        defb 0ech               ;f1b4
+        defb 0edh               ;f1b5
+        defb 038h               ;f1b6   end-calc
+
+        ld hl,0faaah            ;f1b7	21 aa fa 	! . . 
+        call sub_ef8dh          ;f1ba	cd 8d ef 	. . .
+        rst 28h                 ;f1bd   call fp calculator
+
+        defb 0cdh               ;f1be
+        defb 002h               ;f1bf
+        defb 0cch               ;f1c0
+        defb 002h               ;f1c1
+        defb 0e9h               ;f1c2
+        defb 031h               ;f1c3
+        defb 0eah               ;f1c4
+        defb 020h               ;f1c5
+        defb 004h               ;f1c6
+        defb 0c9h               ;f1c7
+        defb 001h               ;f1c8
+        defb 0eah               ;f1c9
+        defb 01fh               ;f1ca
+        defb 004h               ;f1cb
+        defb 0cah               ;f1cc
+        defb 038h               ;f1cd   end-calc
+
+        ld a,004h               ;f1ce	3e 04 	> . 
+        call lefcdh             ;f1d0	cd cd ef 	. . . 
+        rst 28h                 ;f1d3   call fp calculator
+
+        defb 0e9h               ;f1d4
+        defb 031h               ;f1d5
+        defb 0e8h               ;f1d6
+        defb 004h               ;f1d7
+        defb 0eah               ;f1d8
+        defb 0e7h               ;f1d9
+        defb 004h               ;f1da
+        defb 003h               ;f1db
+        defb 0c9h               ;f1dc
+        defb 001h               ;f1dd
+        defb 0e7h               ;f1de
+        defb 004h               ;f1df
+        defb 0eah               ;f1e0
+        defb 0e8h               ;f1e1
+        defb 004h               ;f1e2
+        defb 00fh               ;f1e3
+        defb 0cah               ;f1e4
+        defb 038h               ;f1e5   end-calc
+
+        call cmd_va             ;f1e6	cd 07 f0 	. . . 
+        rst 28h                 ;f1e9   call fp calculator
+        defb 0e6h               ;f1ea
+        defb 0a1h               ;f1eb
+        defb 003h               ;f1ec
+        defb 0c6h               ;f1ed
+        defb 037h               ;f1ee
+        defb 000h               ;f1ef
+        defb 0e4h               ;f1f0
+        defb 0edh               ;f1f1
+        defb 001h               ;f1f2
+        defb 0cdh               ;f1f3
+        defb 002h               ;f1f4
+        defb 001h               ;f1f5
+        defb 0ech               ;f1f6
+        defb 001h               ;f1f7
+        defb 0cch               ;f1f8
+        defb 002h               ;f1f9
+        defb 038h               ;f1fa   end-calc
+
+        call sub_efb4h          ;f1fb	cd b4 ef 	. . . 
+        ld (lfaaeh),hl          ;f1fe	22 ae fa 	" . . 
+        call sub_efb4h          ;f201	cd b4 ef 	. . . 
+        ld (lfab0h),hl          ;f204	22 b0 fa 	" . . 
+        ld a,004h               ;f207	3e 04 	> . 
+        ld (D010+00ah),a        ;f209	32 80 fa 	2 . . 
+        call sub_f3e9h          ;f20c	cd e9 f3 	. . . 
+        jp lefddh               ;f20f	c3 dd ef 	. . .
 
 ; *****************************************************************************
 ; * Circle
 ; * PRINT #4; "CR"; N
 ; *****************************************************************************
 cmd_cr: 
-	rst 28h			;f212	ef 	. 
-	and b			;f213	a0 	. 
-	and b			;f214	a0 	. 
-	jr c,lf1e4h		;f215	38 cd 	8 . 
-	ld a,c			;f217	79 	y 
-	pop af			;f218	f1 	. 
-	xor a			;f219	af 	. 
-	jp sub_f6d5h		;f21a	c3 d5 f6 	. . .
+        rst 28h                 ;f212   call fp calculator
+        defb 0a0h               ;f213
+        defb 0a0h               ;f214
+        defb 038h               ;f215   end-calc
+
+        call sub_f179h          ;f216	cd 79 f1 	. y . 
+        xor a                   ;f219	af 	. 
+        jp sub_f6d5h            ;f21a	c3 d5 f6 	. . .
 
 ; *****************************************************************************
 ; * Normal Spacing
