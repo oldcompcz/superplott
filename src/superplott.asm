@@ -228,12 +228,12 @@ PUTX:
         ld (05c68h),hl          ;ed7d   Address of area used for calculator's memory. 
         ld de,(D006_whe_x)      ;ed80
         call sub_ef98h          ;ed84
-        rst 28h                 ;ed87   call fp calculator
 
-        defb 0ech               ;ed88   get |m|
-        defb 003h               ;ed89   subtract |f|-|m|
-        defb 0ebh               ;ed8a   get |f|
-        defb 005h               ;ed8b   divide f/m
+        rst 28h                 ;ed87   call fp calculator
+        defb 0ech               ;ed88   get-mem 12
+        defb 003h               ;ed89   subtract
+        defb 0ebh               ;ed8a   get-mem 11
+        defb 005h               ;ed8b   division
         defb 038h               ;ed8c   end-calc
 led8dh:
         pop hl                  ;ed8d
@@ -253,12 +253,12 @@ PUTY:
         ld (05c68h),hl          ;ed99   Address of area used for calculator's memory.
         ld de,(D007_whe_y)      ;ed9c
         call sub_ef98h          ;eda0
-        rst 28h                 ;eda3   call fp calculator
 
-        defb 0edh               ;eda4   get COS 8 (??? cannot read it from doc)
-        defb 003h               ;eda5   subtract |f|-|m|
-        defb 0ebh               ;eda6   get |f|
-        defb 005h               ;eda7   divide f/m
+        rst 28h                 ;eda3   call fp calculator
+        defb 0edh               ;eda4   get-mem 13
+        defb 003h               ;eda5   subtract
+        defb 0ebh               ;eda6   get-mem 11
+        defb 005h               ;eda7   division
         defb 038h               ;eda8   end-calc
 
         jr led8dh               ;eda9
@@ -596,11 +596,11 @@ sub_ef42h:
         call 02c9bh             ;ef57   decimal to floating point 
         pop af                  ;ef5a   restore char
         ret nz                  ;ef5b
+
         rst 28h                 ;ef5c   call fp calculator
-        
-        defb 01bh               ;ef5d   -2 pi
+        defb 01bh               ;ef5d   negate
         defb 038h               ;ef5e   end-calc
-        
+
         inc d                   ;ef5f
         ret                     ;ef60
 
@@ -636,12 +636,12 @@ lef82h:
         add hl,de               ;ef83
 sub_ef84h:
         rst 28h                 ;ef84   call fp calculator
-        defb 0ebh               ;ef85   get |f|
+        defb 0ebh               ;ef85   get-mem 11
         defb 004h               ;ef86   multiply
-        defb 001h               ;ef87   exchange (larger number is on top)
-        defb 0ebh               ;ef88   get |f|
+        defb 001h               ;ef87   exchange
+        defb 0ebh               ;ef88   get-mem 11
         defb 004h               ;ef89   multiply
-        defb 001h               ;ef8a   exchange (larger number is on top)
+        defb 001h               ;ef8a   exchange
         defb 038h               ;ef8b   end-calc
         ret                     ;ef8c
 
@@ -654,9 +654,11 @@ sub_ef8dh:
 
 ; Calculator 
 sub_ef98h:
-        push de                 ;ef98   d5 	. 
+        push de                 ;ef98   d5 	.
+
         rst 28h                 ;ef99   call fp calculator
         defb 038h               ;ef9a   end-calc
+
         ex de,hl                ;ef9b   eb 	8 . 
         pop de                  ;ef9c   d1 	. 
         ld c,000h               ;ef9d   0e 00 	. . 
@@ -681,9 +683,8 @@ lefa6h:
 ;
 sub_efb4h:
         rst 28h                 ;efb4   call fp calculator
-
         defb 0a2h               ;efb5   stk-half
-        defb 00fh               ;efb6   add
+        defb 00fh               ;efb6   addition
         defb 027h               ;efb7   integer
         defb 002h               ;efb8   delete
         defb 038h               ;efb9   end-calc
@@ -708,11 +709,11 @@ lefcbh:
         ld a,(bc)               ;efcc 
 lefcdh:
         ld (D010+00ah),a        ;efcd 
-        call sub_ef84h          ;efd0 
-        rst 28h                 ;efd3   call fp calculator
+        call sub_ef84h          ;efd0
 
-        defb 0ech               ;efd4   get |m|
-        defb 0edh               ;efd5   get COS 8 (??? cannot read it from doc)
+        rst 28h                 ;efd3   call fp calculator
+        defb 0ech               ;efd4   get-mem 12
+        defb 0edh               ;efd5   get-mem 13
         defb 038h               ;efd6   end-calc
 
 lefd7h:
@@ -739,14 +740,14 @@ sub_eff7h:
 	ret			;effb	c9 	. 
 sub_effch:
         rst 28h                 ;effc   call fp calculator
-        defb 001h               ;effd   exchange (larger number is on top)
-        defb 0c0h               ;effe
+        defb 001h               ;effd   exchange
+        defb 0c0h               ;effe   set-mem 0
         defb 002h               ;efff   delete
-        defb 00fh               ;f000   add
-        defb 001h               ;f001   exchange (larger number is on top)
-        defb 0e0h               ;f002
-        defb 00fh               ;f003   add
-        defb 001h               ;f004   exchange (larger number is on top)
+        defb 00fh               ;f000   addition
+        defb 001h               ;f001   exchange
+        defb 0e0h               ;f002   get-mem 0
+        defb 00fh               ;f003   addition
+        defb 001h               ;f004   exchange
         defb 038h               ;f005   end-calc
         ret                     ;f006
  
@@ -814,9 +815,9 @@ cmd_pr:
 ; *****************************************************************************
 cmd_og: 
         rst 28h                 ;f02f   call fp calculator
-        defb 0cdh               ;f030   set cos 8
+        defb 0cdh               ;f030   set-mem 13
         defb 002h               ;f031   delete
-        defb 0cch               ;f032
+        defb 0cch               ;f032   set-mem 12
         defb 002h               ;f033   delete
         defb 038h               ;f034   end-calc
         ret                     ;f035
@@ -831,15 +832,17 @@ cmd_dw:
 lf03bh:
         push bc                 ;f03b	c5 	. 
         push hl                 ;f03c	e5 	. 
-        call sub_ef84h          ;f03d	cd 84 ef 	. . . 
+        call sub_ef84h          ;f03d	cd 84 ef 	. . .
+
         rst 28h                 ;f040   call fp calculator 
-        defb 0edh               ;f041   get COS 8 (??? cannot read it from doc)
-        defb 00fh               ;f042   add
-        defb 001h               ;f043   exchange (larger number is on top)
-        defb 0ech               ;f044   get |m|
-        defb 00fh               ;f045   add
-        defb 001h               ;f046   exchange (larger number is on top)
+        defb 0edh               ;f041   get-mem 13
+        defb 00fh               ;f042   addition
+        defb 001h               ;f043   exchange
+        defb 0ech               ;f044   get-mem 12
+        defb 00fh               ;f045   addition
+        defb 001h               ;f046   exchange
         defb 038h               ;f047   end-calc
+
         call sub_efb4h          ;f048	cd b4 ef 	. . . 
         pop hl                  ;f04b	e1 	. 
         ld (hl),d               ;f04c	72 	r 
@@ -882,10 +885,10 @@ lf064h:
  cmd_cs:
         call sub_ef84h          ;f06e	cd 84 ef 	. . . 
         call sub_ef35h          ;f071	cd 35 ef 	. 5 . 
-        jr nz,lf07bh            ;f074	20 05 	  . 
-        rst 28h                 ;f076   call fp calculator
+        jr nz,lf07bh            ;f074	20 05 	  .
 
-        defb 0a0h               ;f077
+        rst 28h                 ;f076   call fp calculator
+        defb 0a0h               ;f077   stk-zero
         defb 038h               ;f078   end-calc
 
         jr lf083h               ;f079	18 08 	. . 
@@ -895,8 +898,7 @@ lf07bh:
         jr nz,lf088h            ;f081	20 05 	  .
 lf083h: 
         rst 28h                 ;f083   call fp calculator
-
-        defb 0a3h               ;f084
+        defb 0a3h               ;f084   stk-pi/2
         defb 038h               ;f085   end-calc
 
         jr lf08bh               ;f086	18 03 	. . 
@@ -904,54 +906,53 @@ lf088h:
         call sub_f156h          ;f088	cd 56 f1 	. V .
 lf08bh: 
         rst 28h                 ;f08b   call fp calculator
-        
-        defb 001h               ;f08c
-        defb 0cah               ;f08d
-        defb 00fh               ;f08e
-        defb 0c9h               ;f08f
-        defb 002h               ;f090
-        defb 031h               ;f091
-        defb 031h               ;f092
-        defb 0eah               ;f093
-        defb 01fh               ;f094
-        defb 0c7h               ;f095
-        defb 004h               ;f096
-        defb 001h               ;f097
-        defb 0eah               ;f098
-        defb 020h               ;f099
-        defb 0c6h               ;f09a
-        defb 004h               ;f09b
-        defb 01bh               ;f09c
+        defb 001h               ;f08c   exchange
+        defb 0cah               ;f08d   set-mem 10
+        defb 00fh               ;f08e   addition
+        defb 0c9h               ;f08f   set-mem 9
+        defb 002h               ;f090   delete
+        defb 031h               ;f091   duplicate
+        defb 031h               ;f092   duplicate
+        defb 0eah               ;f093   get-mem 10
+        defb 01fh               ;f094   sin
+        defb 0c7h               ;f095   set-mem 7
+        defb 004h               ;f096   multiply
+        defb 001h               ;f097   exchange
+        defb 0eah               ;f098   get-mem 10
+        defb 020h               ;f099   cos
+        defb 0c6h               ;f09a   set-mem 6
+        defb 004h               ;f09b   multiply
+        defb 01bh               ;f09c   negate
         defb 038h               ;f09d   end-calc
 
         call sub_efb4h          ;f09e	cd b4 ef 	. . . 
         ld (lfb1dh),hl          ;f0a1	22 1d fb 	" . . 
         call sub_efb4h          ;f0a4	cd b4 ef 	. . . 
-        ld (lfb1bh),hl          ;f0a7	22 1b fb 	" . . 
-        rst 28h                 ;f0aa   call fp calculator
+        ld (lfb1bh),hl          ;f0a7	22 1b fb 	" . .
 
-        defb 031h               ;f0ab
-        defb 0e9h               ;f0ac
-        defb 01fh               ;f0ad
-        defb 004h               ;f0ae
-        defb 001h               ;f0af
-        defb 0e9h               ;f0b0
-        defb 020h               ;f0b1
-        defb 004h               ;f0b2
+        rst 28h                 ;f0aa   call fp calculator
+        defb 031h               ;f0ab   duplicate
+        defb 0e9h               ;f0ac   get-mem 9
+        defb 01fh               ;f0ad   sin
+        defb 004h               ;f0ae   multiply
+        defb 001h               ;f0af   exchange
+        defb 0e9h               ;f0b0   get-mem 9
+        defb 020h               ;f0b1   cos
+        defb 004h               ;f0b2   multiply
         defb 038h               ;f0b3   end-calc
 
         call sub_efb4h          ;f0b4	cd b4 ef 	. . . 
         ld (lfb17h),hl          ;f0b7	22 17 fb 	" . . 
         call sub_efb4h          ;f0ba	cd b4 ef 	. . . 
-        ld (lfb19h),hl          ;f0bd	22 19 fb 	" . . 
-        rst 28h                 ;f0c0   call fp calculator
+        ld (lfb19h),hl          ;f0bd	22 19 fb 	" . .
 
-        defb 031h               ;f0c1
-        defb 0e6h               ;f0c2
-        defb 004h               ;f0c3
-        defb 001h               ;f0c4
-        defb 0e7h               ;f0c5
-        defb 004h               ;f0c6
+        rst 28h                 ;f0c0   call fp calculator
+        defb 031h               ;f0c1   duplicate
+        defb 0e6h               ;f0c2   get-mem 6
+        defb 004h               ;f0c3   multiply
+        defb 001h               ;f0c4   exchange
+        defb 0e7h               ;f0c5   get-mem 7
+        defb 004h               ;f0c6   multiply
         defb 038h               ;f0c7   end-calc
 
         call sub_efb4h          ;f0c8	cd b4 ef 	. . . 
@@ -961,25 +962,25 @@ lf08bh:
         call sub_ef35h          ;f0d4	cd 35 ef 	. 5 . 
         jr z,lf103h             ;f0d7	28 2a 	( * 
         call sub_ef35h          ;f0d9	cd 35 ef 	. 5 . 
-        jp z,lef82h             ;f0dc	ca 82 ef 	. . . 
-        rst 28h                 ;f0df   call fp calculator
+        jp z,lef82h             ;f0dc	ca 82 ef 	. . .
 
-        defb 031h               ;f0e0
-        defb 0e7h               ;f0e1
-        defb 004h               ;f0e2
-        defb 001h               ;f0e3
-        defb 0e6h               ;f0e4
-        defb 004h               ;f0e5
+        rst 28h                 ;f0df   call fp calculator
+        defb 031h               ;f0e0   duplicate
+        defb 0e7h               ;f0e1   get-mem 7
+        defb 004h               ;f0e2   multiply
+        defb 001h               ;f0e3   exchange
+        defb 0e6h               ;f0e4   get-mem 6
+        defb 004h               ;f0e5   multiply
         defb 038h               ;f0e6   end-calc
 
         call sub_efb4h          ;f0e7	cd b4 ef 	. . . 
         ld (D010 + 1ah),hl      ;f0ea	22 90 fa 	" . . 
         call sub_efb4h          ;f0ed	cd b4 ef 	. . . 
         ld (lfa92h),hl          ;f0f0	22 92 fa 	" . . 
-        rst 28h                 ;f0f3   call fp calculator
 
-        defb 0ebh               ;f0f4
-        defb 004h               ;f0f5
+        rst 28h                 ;f0f3   call fp calculator
+        defb 0ebh               ;f0f4   get-mem 11
+        defb 004h               ;f0f5   multiply
         defb 038h               ;f0f6   end-calc
 
         call sub_efb4h          ;f0f7	cd b4 ef 	. . . 
@@ -1034,19 +1035,22 @@ sub_f14ah:
 ; *****************************************************************************
 cmd_sc: 
         rst 28h                 ;f151   call fp calculator 
-        defb 0cbh               ;f152
-        defb 002h               ;f153
+        defb 0cbh               ;f152   set-mem 11
+        defb 002h               ;f153   delete
         defb 038h               ;f154   end-calc
+
         ret                     ;f155	c9 	.	.
 sub_f156h:
         ret                     ;f156	c9 	. 
         ld de,0005ah            ;f157	11 5a 00 	. Z . 
         call sub_ef98h          ;f15a	cd 98 ef 	. . . 
+
         rst 28h                 ;f15d   call fp calculator
-        defb 005h               ;f15e
-        defb 0a3h               ;f15f
-        defb 004h               ;f160
+        defb 005h               ;f15e   division
+        defb 0a3h               ;f15f   stk-pi/2
+        defb 004h               ;f160   multiply
         defb 038h               ;f161   end-calc
+
         ret                     ;f162	c9 	.
 
 ; *****************************************************************************
@@ -1068,139 +1072,139 @@ cmd_dg:
 ; *****************************************************************************
 cmd_ac: 
         call sub_f156h          ;f170	cd 56 f1 	. V . 
-        rst 28h                 ;f173   call fp calculator
 
-        defb 001h               ;f174
-        
+        rst 28h                 ;f173   call fp calculator
+        defb 001h               ;f174   exchange
         defb 038h               ;f175   end-calc
+
         call sub_f156h          ;f176	cd 56 f1 	. V .
 sub_f179h: 
         rst 28h                 ;f179   call fp calculator
-
-        defb 0cah               ;f17a
-        defb 003h               ;f17b
-        defb 001h               ;f17c
-        defb 0c9h               ;f17d
-        defb 0ebh               ;f17e
-        defb 004h               ;f17f
-        defb 029h               ;f180
-        defb 0c7h               ;f181
-        defb 004h               ;f182
-        defb 0c8h               ;f183
-        defb 0a3h               ;f184
-        defb 031h               ;f185
-        defb 00fh               ;f186
-        defb 031h               ;f187
-        defb 00fh               ;f188
-        defb 0c6h               ;f189
-        defb 005h               ;f18a
-        defb 027h               ;f18b
-        defb 0e6h               ;f18c
-        defb 004h               ;f18d
-        defb 0e8h               ;f18e
-        defb 001h               ;f18f
-        defb 003h               ;f190
-        defb 031h               ;f191
-        defb 000h               ;f192
-        defb 003h               ;f193
-        defb 002h               ;f194
-        defb 0e6h               ;f195
-        defb 0c8h               ;f196
-        defb 0e9h               ;f197
-        defb 02ah               ;f198
-        defb 0c9h               ;f199
-        defb 0ebh               ;f19a
-        defb 004h               ;f19b
-        defb 02ah               ;f19c
-        defb 031h               ;f19d
-        defb 0a1h               ;f19e
-        defb 003h               ;f19f
-        defb 001h               ;f1a0
-        defb 005h               ;f1a1
-        defb 023h               ;f1a2
-        defb 005h               ;f1a3
-        defb 0a1h               ;f1a4
-        defb 00fh               ;f1a5
-        defb 027h               ;f1a6
-        defb 0c6h               ;f1a7
-        defb 0e8h               ;f1a8
-        defb 001h               ;f1a9
-        defb 005h               ;f1aa
-        defb 0e7h               ;f1ab
-        defb 004h               ;f1ac
-        defb 031h               ;f1ad
-        defb 020h               ;f1ae
-        defb 0c8h               ;f1af
-        defb 002h               ;f1b0
-        defb 01fh               ;f1b1
-        defb 0c7h               ;f1b2
-        defb 002h               ;f1b3
-        defb 0ech               ;f1b4
-        defb 0edh               ;f1b5
+        defb 0cah               ;f17a   set-mem 10
+        defb 003h               ;f17b   subtract
+        defb 001h               ;f17c   exchange
+        defb 0c9h               ;f17d   set-mem 9
+        defb 0ebh               ;f17e   get-mem 11
+        defb 004h               ;f17f   multiply
+        defb 029h               ;f180   sgn
+        defb 0c7h               ;f181   set-mem 7
+        defb 004h               ;f182   multiply
+        defb 0c8h               ;f183   set-mem 8
+        defb 0a3h               ;f184   stk-pi/2
+        defb 031h               ;f185   duplicate
+        defb 00fh               ;f186   addition
+        defb 031h               ;f187   duplicate
+        defb 00fh               ;f188   addition
+        defb 0c6h               ;f189   set-mem 6
+        defb 005h               ;f18a   division
+        defb 027h               ;f18b   integer
+        defb 0e6h               ;f18c   get-mem 6
+        defb 004h               ;f18d   multiply
+        defb 0e8h               ;f18e   get-mem 8
+        defb 001h               ;f18f   exchange
+        defb 003h               ;f190   subtract
+        defb 031h               ;f191   duplicate
+        defb 000h               ;f192   jump-true
+        defb 003h               ;f193   subtract
+        defb 002h               ;f194   delete
+        defb 0e6h               ;f195   get-mem 6
+        defb 0c8h               ;f196   set-mem 8
+        defb 0e9h               ;f197   get-mem 9
+        defb 02ah               ;f198   abs
+        defb 0c9h               ;f199   set-mem 9
+        defb 0ebh               ;f19a   get-mem 11
+        defb 004h               ;f19b   multiply
+        defb 02ah               ;f19c   abs
+        defb 031h               ;f19d   duplicate
+        defb 0a1h               ;f19e   stk-one
+        defb 003h               ;f19f   subtract
+        defb 001h               ;f1a0   exchange
+        defb 005h               ;f1a1   division
+        defb 023h               ;f1a2   acs
+        defb 005h               ;f1a3   division
+        defb 0a1h               ;f1a4   stk-one
+        defb 00fh               ;f1a5   addition
+        defb 027h               ;f1a6   integer
+        defb 0c6h               ;f1a7   set-mem 6
+        defb 0e8h               ;f1a8   get-mem 8
+        defb 001h               ;f1a9   exchange
+        defb 005h               ;f1aa   division
+        defb 0e7h               ;f1ab   get-mem 7
+        defb 004h               ;f1ac   multiply
+        defb 031h               ;f1ad   duplicate
+        defb 020h               ;f1ae   cos
+        defb 0c8h               ;f1af   set-mem 8
+        defb 002h               ;f1b0   delete
+        defb 01fh               ;f1b1   sin
+        defb 0c7h               ;f1b2   set-mem 7
+        defb 002h               ;f1b3   delete
+        defb 0ech               ;f1b4   get-mem 12
+        defb 0edh               ;f1b5   get-mem 13
         defb 038h               ;f1b6   end-calc
 
         ld hl,0faaah            ;f1b7	21 aa fa 	! . . 
         call sub_ef8dh          ;f1ba	cd 8d ef 	. . .
-        rst 28h                 ;f1bd   call fp calculator
 
-        defb 0cdh               ;f1be
-        defb 002h               ;f1bf
-        defb 0cch               ;f1c0
-        defb 002h               ;f1c1
-        defb 0e9h               ;f1c2
-        defb 031h               ;f1c3
-        defb 0eah               ;f1c4
-        defb 020h               ;f1c5
-        defb 004h               ;f1c6
-        defb 0c9h               ;f1c7
-        defb 001h               ;f1c8
-        defb 0eah               ;f1c9
-        defb 01fh               ;f1ca
-        defb 004h               ;f1cb
-        defb 0cah               ;f1cc
+        rst 28h                 ;f1bd   call fp calculator
+        defb 0cdh               ;f1be   set-mem 13
+        defb 002h               ;f1bf   delete
+        defb 0cch               ;f1c0   set-mem 12
+        defb 002h               ;f1c1   delete
+        defb 0e9h               ;f1c2   get-mem 9
+        defb 031h               ;f1c3   duplicate
+        defb 0eah               ;f1c4   get-mem 10
+        defb 020h               ;f1c5   cos
+        defb 004h               ;f1c6   multiply
+        defb 0c9h               ;f1c7   set-mem 9
+        defb 001h               ;f1c8   exchange
+        defb 0eah               ;f1c9   get-mem 10
+        defb 01fh               ;f1ca   sin
+        defb 004h               ;f1cb   multiply
+        defb 0cah               ;f1cc   set-mem 10
         defb 038h               ;f1cd   end-calc
 
         ld a,004h               ;f1ce	3e 04 	> . 
-        call lefcdh             ;f1d0	cd cd ef 	. . . 
-        rst 28h                 ;f1d3   call fp calculator
+        call lefcdh             ;f1d0	cd cd ef 	. . .
 
-        defb 0e9h               ;f1d4
-        defb 031h               ;f1d5
-        defb 0e8h               ;f1d6
-        defb 004h               ;f1d7
-        defb 0eah               ;f1d8
-        defb 0e7h               ;f1d9
-        defb 004h               ;f1da
-        defb 003h               ;f1db
-        defb 0c9h               ;f1dc
-        defb 001h               ;f1dd
-        defb 0e7h               ;f1de
-        defb 004h               ;f1df
-        defb 0eah               ;f1e0
-        defb 0e8h               ;f1e1
-        defb 004h               ;f1e2
-        defb 00fh               ;f1e3
-        defb 0cah               ;f1e4
+        rst 28h                 ;f1d3   call fp calculator
+        defb 0e9h               ;f1d4   get-mem 9
+        defb 031h               ;f1d5   duplicate
+        defb 0e8h               ;f1d6   get-mem 8
+        defb 004h               ;f1d7   multiply
+        defb 0eah               ;f1d8   get-mem 10
+        defb 0e7h               ;f1d9   get-mem 8
+        defb 004h               ;f1da   multiply
+        defb 003h               ;f1db   subtract
+        defb 0c9h               ;f1dc   set-mem 9
+        defb 001h               ;f1dd   exchange
+        defb 0e7h               ;f1de   get-mem 7
+        defb 004h               ;f1df   multiply
+        defb 0eah               ;f1e0   get-mem 10
+        defb 0e8h               ;f1e1   get-mem 8
+        defb 004h               ;f1e2   multiply
+        defb 00fh               ;f1e3   addition
+        defb 0cah               ;f1e4   set-mem 10
         defb 038h               ;f1e5   end-calc
 
         call cmd_va             ;f1e6	cd 07 f0 	. . . 
+
         rst 28h                 ;f1e9   call fp calculator
-        defb 0e6h               ;f1ea
-        defb 0a1h               ;f1eb
-        defb 003h               ;f1ec
-        defb 0c6h               ;f1ed
-        defb 037h               ;f1ee
-        defb 000h               ;f1ef
-        defb 0e4h               ;f1f0
-        defb 0edh               ;f1f1
-        defb 001h               ;f1f2
-        defb 0cdh               ;f1f3
-        defb 002h               ;f1f4
-        defb 001h               ;f1f5
-        defb 0ech               ;f1f6
-        defb 001h               ;f1f7
-        defb 0cch               ;f1f8
-        defb 002h               ;f1f9
+        defb 0e6h               ;f1ea   get-mem 6
+        defb 0a1h               ;f1eb   stk-one
+        defb 003h               ;f1ec   subtract
+        defb 0c6h               ;f1ed   set-mem 6
+        defb 037h               ;f1ee   greater-0
+        defb 000h               ;f1ef   jump-true
+        defb 0e4h               ;f1f0   get-mem 4
+        defb 0edh               ;f1f1   get-mem 13
+        defb 001h               ;f1f2   exchange
+        defb 0cdh               ;f1f3   set-mem 13
+        defb 002h               ;f1f4   delete
+        defb 001h               ;f1f5   exchange
+        defb 0ech               ;f1f6   get-mem 12
+        defb 001h               ;f1f7   exchange
+        defb 0cch               ;f1f8   set-mem 12
+        defb 002h               ;f1f9   delete
         defb 038h               ;f1fa   end-calc
 
         call sub_efb4h          ;f1fb	cd b4 ef 	. . . 
@@ -1218,8 +1222,8 @@ sub_f179h:
 ; *****************************************************************************
 cmd_cr: 
         rst 28h                 ;f212   call fp calculator
-        defb 0a0h               ;f213
-        defb 0a0h               ;f214
+        defb 0a0h               ;f213   stk-zero
+        defb 0a0h               ;f214   stk-zero
         defb 038h               ;f215   end-calc
 
         call sub_f179h          ;f216	cd 79 f1 	. y . 
