@@ -29,4 +29,6 @@ CAL17:   start 0xf1be end 0xf1ce type bytedata
 CAL18:   start 0xf1d4 end 0xf1e6 type bytedata
 CAL19:   start 0xf1ea end 0xf1fb type bytedata
 CAL20:   start 0xf213 end 0xf216 type bytedata
+CAL21:   start 0xf2a5 end 0xf2aa type bytedata
+CAL22:   start 0xf2bc end 0xf2c0 type bytedata
 CMDS:    start 0xfb7c end 0xfc03 type bytedata
