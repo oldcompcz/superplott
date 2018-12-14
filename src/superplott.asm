@@ -646,11 +646,11 @@ sub_ef84h:
         ret                     ;ef8c
 
 sub_ef8dh:
-	call sub_eff7h		;ef8d	cd f7 ef 	. . . 
-	push hl			;ef90	e5 	. 
-	call sub_ef98h		;ef91	cd 98 ef 	. . . 
-	pop hl			;ef94	e1 	. 
-	call sub_eff7h		;ef95	cd f7 ef 	. . .
+        call sub_eff7h          ;ef8d   load de from (hl) and inc hl
+        push hl                 ;ef90	e5 	. 
+        call sub_ef98h          ;ef91	cd 98 ef 	. . . 
+        pop hl                  ;ef94	e1 	. 
+        call sub_eff7h          ;ef95   load de from (hl) and inc hl
 
 ; Calculator 
 sub_ef98h:
@@ -666,20 +666,19 @@ sub_ef98h:
         jr z,lefa4h             ;efa1   28 01 	( . 
         dec c                   ;efa3   0d 	. 
 lefa4h:
-	ld (hl),000h		;efa4	36 00 	6 . 
+        ld (hl),000h            ;efa4	36 00 	6 . 
 lefa6h:
-	inc hl			;efa6	23 	# 
-	ld (hl),c			;efa7	71 	q 
-	inc hl			;efa8	23 	# 
-	ld (hl),e			;efa9	73 	s 
-	inc hl			;efaa	23 	# 
-	ld (hl),d			;efab	72 	r 
-	inc hl			;efac	23 	# 
-	ld (hl),000h		;efad	36 00 	6 . 
-	inc hl			;efaf	23 	# 
-	ld (05c65h),hl		;efb0	22 65 5c 	" e \ 
-	ret			;efb3	c9 	.
- 
+        inc hl                  ;efa6	23 	# 
+        ld (hl),c               ;efa7	71 	q 
+        inc hl                  ;efa8	23 	# 
+        ld (hl),e               ;efa9	73 	s 
+        inc hl                  ;efaa	23 	# 
+        ld (hl),d               ;efab	72 	r 
+        inc hl                  ;efac	23 	# 
+        ld (hl),000h            ;efad	36 00 	6 . 
+        inc hl                  ;efaf	23 	# 
+        ld (05c65h),hl          ;efb0   Address of start of spare space
+        ret                     ;efb3	c9 	.
 ;
 sub_efb4h:
         rst 28h                 ;efb4   call fp calculator
@@ -692,7 +691,7 @@ sub_efb4h:
         ex de,hl                ;efba 
         xor a                   ;efbb 
         or (hl)                 ;efbc 
-        jr nz,lefcbh            ;efbd 
+        jr nz,lefcbh            ;efbd   go to error 
         inc hl                  ;efbf 
         ld a,(hl)               ;efc0 
         inc hl                  ;efc1 
@@ -707,9 +706,11 @@ sub_efb4h:
 lefcbh:
         rst 8                   ;efcb   print error 
         ld a,(bc)               ;efcc 
-lefcdh:
-        ld (D010+00ah),a        ;efcd 
-        call sub_ef84h          ;efd0
+
+; move/vector absolute
+go_absolute:
+        ld (D010+00ah),a        ;efcd   save pen position 
+        call sub_ef84h          ;efd0   calc
 
         rst 28h                 ;efd3   call fp calculator
         defb 0ech               ;efd4   get-mem 12
@@ -726,18 +727,22 @@ lefddh:
         ldir                    ;efe6	ed b0 	. . 
         ret                     ;efe8	c9 	.
 
-lefe9h:
-	ld (D010+00ah),a		;efe9	32 80 fa 	2 . . 
-	call sub_ef84h		;efec	cd 84 ef 	. . . 
-	ld hl,D006_whe_x		;efef	21 aa fa 	! . . 
-	call sub_ef8dh		;eff2	cd 8d ef 	. . . 
-	jr lefd7h		;eff5	18 e0 	. . 
+; move/vector relative
+go_relative:
+        ld (D010+00ah),a        ;efe9   save pen position 
+        call sub_ef84h          ;efec   calc 
+        ld hl,D006_whe_x        ;efef	21 aa fa 	! . . 
+        call sub_ef8dh          ;eff2	cd 8d ef 	. . . 
+        jr lefd7h               ;eff5	18 e0 	. .
+
+; load de from (hl) and inc hl
 sub_eff7h:
-	ld e,(hl)			;eff7	5e 	^ 
-	inc hl			;eff8	23 	# 
-	ld d,(hl)			;eff9	56 	V 
-	inc hl			;effa	23 	# 
-	ret			;effb	c9 	. 
+        ld e,(hl)               ;eff7
+        inc hl                  ;eff8
+        ld d,(hl)               ;eff9
+        inc hl                  ;effa
+        ret                     ;effb
+
 sub_effch:
         rst 28h                 ;effc   call fp calculator
         defb 001h               ;effd   exchange
@@ -756,58 +761,58 @@ sub_effch:
 ; * PRINT #4; "VA"; N1,N2
 ; *****************************************************************************
 cmd_va: 
-	ld a,001h		;f007	3e 01 	> . 
-	jr lefcdh		;f009	18 c2 	. .
+        ld a,001h               ;f007   pen down
+        jr go_absolute          ;f009
 
 ; *****************************************************************************
 ; * Vector Relative
 ; * PRINT #4; "VR"; N1,N2
 ; *****************************************************************************
 cmd_vr:  
-	ld a,001h		;f00b	3e 01 	> . 
-	jr lefe9h		;f00d	18 da 	. .
+        ld a,001h               ;f00b   pen down
+        jr go_relative          ;f00d
 
 ; *****************************************************************************
 ; * Move Absolute
 ; * PRINT #4; "MA"; N1,N2
 ; *****************************************************************************
 cmd_ma: 
-	xor a			;f00f	af 	. 
-	jr lefcdh		;f010	18 bb 	. .
+        xor a                   ;f00f   pen up
+        jr go_absolute          ;f010
 
 ; *****************************************************************************
 ; * Move Relative
 ; * PRINT #4; "MR"; N1,N2
 ; *****************************************************************************
 cmd_mr: 
-	xor a			;f012	af 	. 
-	jr lefe9h		;f013	18 d4 	. .
+        xor a                   ;f012   pen up
+        jr go_relative          ;f013
 
 ; *****************************************************************************
 ; * Point Absolute
 ; * PRINT #4; "PA"; N1,N2
 ; *****************************************************************************
 cmd_pa: 
-	ld a,002h		;f015	3e 02 	> . 
-	call lefcdh		;f017	cd cd ef 	. . . 
+        ld a,002h               ;f015   make point
+        call go_absolute        ;f017
 lf01ah:
-	ld a,(D010+009h)	;f01a	3a 7f fa 	:  . 
-	and a			;f01d	a7 	. 
-	ret m			;f01e	f8 	. 
+        ld a,(D010+009h)        ;f01a	3a 7f fa 	:  . 
+        and a                   ;f01d	a7 	. 
+        ret m                   ;f01e	f8 	. 
 sub_f01fh:
-	ld a,001h		;f01f	3e 01 	> . 
-	call sub_f6d5h		;f021	cd d5 f6 	. . . 
-	xor a			;f024	af 	. 
-	jp sub_f6d5h		;f025	c3 d5 f6 	. . .
+        ld a,001h               ;f01f	3e 01 	> . 
+        call sub_f6d5h          ;f021	cd d5 f6 	. . . 
+        xor a                   ;f024	af 	. 
+        jp sub_f6d5h            ;f025	c3 d5 f6 	. . .
 
 ; *****************************************************************************
 ; * Point Relative
 ; * PRINT #4; "PR"; N1,N2
 ; *****************************************************************************
 cmd_pr: 
-	ld a,002h		;f028	3e 02 	> . 
-	call lefe9h		;f02a	cd e9 ef 	. . . 
-	jr lf01ah		;f02d	18 eb 	. .
+        ld a,002h               ;f028   make point
+        call go_relative        ;f02a
+        jr lf01ah               ;f02d
 
 ; *****************************************************************************
 ; * Origin
@@ -1009,10 +1014,10 @@ cmd_vw:
         call sub_f3e9h          ;f11a	cd e9 f3 	. . . 
         ld (ix+00ah),001h       ;f11d	dd 36 0a 01 	. 6 . . 
         ld hl,(lfa96h)          ;f121	2a 96 fa 	* . . 
-        ld (lfaaeh),hl          ;f124	22 ae fa 	" . . 
+        ld (D013),hl            ;f124	22 ae fa 	" . . 
         call sub_f3e9h          ;f127	cd e9 f3 	. . . 
         ld hl,(lfa9ah)          ;f12a	2a 9a fa 	* . . 
-        ld (lfab0h),hl          ;f12d	22 b0 fa 	" . . 
+        ld (D012),hl            ;f12d	22 b0 fa 	" . . 
         call sub_f3e9h          ;f130	cd e9 f3 	. . . 
         call sub_f143h          ;f133	cd 43 f1 	. C . 
         call sub_f3e9h          ;f136	cd e9 f3 	. . . 
@@ -1022,11 +1027,11 @@ cmd_vw:
         jp sub_f6d5h            ;f140	c3 d5 f6 	. . . 
 sub_f143h:
         ld hl,(lfa94h)          ;f143	2a 94 fa 	* . . 
-        ld (lfaaeh),hl          ;f146	22 ae fa 	" . . 
+        ld (D013),hl            ;f146	22 ae fa 	" . . 
         ret                     ;f149	c9 	. 
 sub_f14ah:
         ld hl,(lfa96h+2)        ;f14a	2a 98 fa 	* . . 
-        ld (lfab0h),hl          ;f14d	22 b0 fa 	" . . 
+        ld (D012),hl            ;f14d	22 b0 fa 	" . . 
         ret                     ;f150	c9 	.
 
 ; *****************************************************************************
@@ -1164,7 +1169,7 @@ sub_f179h:
         defb 038h               ;f1cd   end-calc
 
         ld a,004h               ;f1ce	3e 04 	> . 
-        call lefcdh             ;f1d0	cd cd ef 	. . .
+        call go_absolute             ;f1d0	cd cd ef 	. . .
 
         rst 28h                 ;f1d3   call fp calculator
         defb 0e9h               ;f1d4   get-mem 9
@@ -1208,9 +1213,9 @@ sub_f179h:
         defb 038h               ;f1fa   end-calc
 
         call sub_efb4h          ;f1fb	cd b4 ef 	. . . 
-        ld (lfaaeh),hl          ;f1fe	22 ae fa 	" . . 
+        ld (D013),hl            ;f1fe	22 ae fa 	" . . 
         call sub_efb4h          ;f201	cd b4 ef 	. . . 
-        ld (lfab0h),hl          ;f204	22 b0 fa 	" . . 
+        ld (D012),hl            ;f204	22 b0 fa 	" . . 
         ld a,004h               ;f207	3e 04 	> . 
         ld (D010+00ah),a        ;f209	32 80 fa 	2 . . 
         call sub_f3e9h          ;f20c	cd e9 f3 	. . . 
@@ -1467,10 +1472,10 @@ lf358h:
 	ld (D010+00ah),a		;f358	32 80 fa 	2 . . 
 	ex (sp),hl			;f35b	e3 	. 
 	ex de,hl			;f35c	eb 	. 
-	ld hl,(lfaaeh)		;f35d	2a ae fa 	* . . 
+	ld hl,(D013)		;f35d	2a ae fa 	* . . 
 	and a			;f360	a7 	. 
 	adc hl,de		;f361	ed 5a 	. Z 
-	ld (lfaaeh),hl		;f363	22 ae fa 	" . . 
+	ld (D013),hl		;f363	22 ae fa 	" . . 
 	ex de,hl			;f366	eb 	. 
 	ex (sp),hl			;f367	e3 	. 
 	push hl			;f368	e5 	. 
@@ -1509,10 +1514,10 @@ lf3a6h:
 	ex (sp),hl			;f3aa	e3 	. 
 	ex de,hl			;f3ab	eb 	. 
 	push de			;f3ac	d5 	. 
-	ld hl,(lfab0h)		;f3ad	2a b0 fa 	* . . 
+	ld hl,(D012)		;f3ad	2a b0 fa 	* . . 
 	xor a			;f3b0	af 	. 
 	sbc hl,de		;f3b1	ed 52 	. R 
-	ld (lfab0h),hl		;f3b3	22 b0 fa 	" . . 
+	ld (D012),hl		;f3b3	22 b0 fa 	" . . 
 	ld (D010+00ah),a		;f3b6	32 80 fa 	2 . . 
 	call sub_f3e9h		;f3b9	cd e9 f3 	. . . 
 	pop hl			;f3bc	e1 	. 
@@ -1533,16 +1538,17 @@ lf3a6h:
 	dec (ix+014h)		;f3d5	dd 35 14 	. 5 . 
 	jp nz,lf346h		;f3d8	c2 46 f3 	. F . 
 	pop de			;f3db	d1 	. 
-	ret			;f3dc	c9 	. 
+	ret			;f3dc	c9 	.
+ 
 sub_f3ddh:
-	call sub_efb4h		;f3dd	cd b4 ef 	. . . 
-	ld (lfab0h),hl		;f3e0	22 b0 fa 	" . . 
-	call sub_efb4h		;f3e3	cd b4 ef 	. . . 
-	ld (lfaaeh),hl		;f3e6	22 ae fa 	" . . 
+        call sub_efb4h          ;f3dd	cd b4 ef 	. . . 
+        ld (D012),hl            ;f3e0	22 b0 fa 	" . . 
+        call sub_efb4h          ;f3e3	cd b4 ef 	. . . 
+        ld (D013),hl            ;f3e6	22 ae fa 	" . . 
 
 ; ???
 sub_f3e9h:
-        ld a,(D010+00ah)           ;f3e9	3a 80 fa 	: . . 
+        ld a,(D010+00ah)        ;f3e9	3a 80 fa 	: . . 
         or a                    ;f3ec	b7 	. 
         jr z,lf46ah             ;f3ed	28 7b 	( { 
         cp 004h                 ;f3ef	fe 04 	. . 
@@ -1558,7 +1564,7 @@ sub_f3e9h:
         ld de,lfa9eh            ;f40b	11 9e fa 	. . . 
         call sub_f476h          ;f40e	cd 76 f4 	. v . 
         jp m,lf451h             ;f411	fa 51 f4 	. Q . 
-        ld a,(D010+009h)           ;f414	3a 7f fa 	:  . 
+        ld a,(D010+009h)        ;f414	3a 7f fa 	:  . 
         or a                    ;f417	b7 	. 
         ld a,(ix+00ah)          ;f418	dd 7e 0a 	. ~ . 
         push af                 ;f41b	f5 	. 
@@ -1582,16 +1588,16 @@ sub_f3e9h:
         ld (ix+00ah),a          ;f442	dd 77 0a 	. w . 
         ld hl,lfacah            ;f445	21 ca fa 	! . . 
         call sub_f598h          ;f448	cd 98 f5 	. . . 
-        ld a,(D010+009h)           ;f44b	3a 7f fa 	:  . 
+        ld a,(D010+009h)        ;f44b	3a 7f fa 	:  . 
         rlca                    ;f44e	07 	. 
         jr c,lf46ah             ;f44f	38 19 	8 . 
 lf451h:
-        ld hl,lfaaeh            ;f451	21 ae fa 	! . . 
+        ld hl,D013              ;f451	21 ae fa 	! . . 
         ld de,D006_whe_x        ;f454	11 aa fa 	. . . 
         call cpy4bytes          ;f457	cd 70 f4 	. p .
 ; Produces sound ??? 
 sub_f45ah:
-        ld a,(D010+009h)           ;f45a	3a 7f fa 	:  . 
+        ld a,(D010+009h)        ;f45a	3a 7f fa 	:  . 
         rlca                    ;f45d	07 	. 
         sbc a,a                 ;f45e	9f 	. 
         xor (iy+00eh)           ;f45f	fd ae 0e 	. . . 
@@ -1625,7 +1631,7 @@ lf480h:
 	xor 0ffh		;f481	ee ff 	. . 
 	ex af,af'			;f483	08 	. 
 	ex de,hl			;f484	eb 	. 
-	call sub_eff7h		;f485	cd f7 ef 	. . . 
+	call sub_eff7h		;f485	load de from (hl) and inc hl 
 	ex de,hl			;f488	eb 	. 
 	push de			;f489	d5 	. 
 	call sub_f4abh		;f48a	cd ab f4 	. . . 
@@ -2248,8 +2254,8 @@ sub_f85dh:
         ld de,D006_whe_x        ;f865
         call cpy4bytes          ;f868   copy 4 bytes and ret
         call sub_f884h          ;f86b	cd 84 f8 	. . . 
-        ld (lfaaeh),hl          ;f86e	22 ae fa 	" . . 
-        ld (lfab0h),de          ;f871	ed 53 b0 fa 	. S . . 
+        ld (D013),hl            ;f86e	22 ae fa 	" . . 
+        ld (D012),de            ;f871	ed 53 b0 fa 	. S . . 
         ld a,001h               ;f875	3e 01 	> . 
         ld (D010+00ah),a           ;f877	32 80 fa 	2 . . 
         jp sub_f3e9h            ;f87a	c3 e9 f3 	. . . 
@@ -2372,11 +2378,11 @@ lf914h:
 	call sub_fa4ah		;f930	cd 4a fa 	. J . 
 	ld hl,(lfab4h)		;f933	2a b4 fa 	* . . 
 	add hl,de			;f936	19 	. 
-	ld (lfab0h),hl		;f937	22 b0 fa 	" . . 
+	ld (D012),hl		;f937	22 b0 fa 	" . . 
 	pop bc			;f93a	c1 	. 
 	ld hl,(lfab2h)		;f93b	2a b2 fa 	* . . 
 	add hl,bc			;f93e	09 	. 
-	ld (lfaaeh),hl		;f93f	22 ae fa 	" . . 
+	ld (D013),hl		;f93f	22 ae fa 	" . . 
 	pop hl			;f942	e1 	. 
 	push hl			;f943	e5 	. 
 	ld a,(hl)			;f944	7e 	~ 
@@ -2435,11 +2441,11 @@ sub_f9b4h:
 	ld hl,(lfab2h)		;f9b4	2a b2 fa 	* . . 
 	add hl,bc			;f9b7	09 	. 
 	ld (lfab2h),hl		;f9b8	22 b2 fa 	" . . 
-	ld (lfaaeh),hl		;f9bb	22 ae fa 	" . . 
+	ld (D013),hl		;f9bb	22 ae fa 	" . . 
 	ld hl,(lfab4h)		;f9be	2a b4 fa 	* . . 
 	add hl,de			;f9c1	19 	. 
 	ld (lfab4h),hl		;f9c2	22 b4 fa 	" . . 
-	ld (lfab0h),hl		;f9c5	22 b0 fa 	" . . 
+	ld (D012),hl		;f9c5	22 b0 fa 	" . . 
 	ret			;f9c8	c9 	.
 
 ; ??? called from Exchange buffers
@@ -2455,7 +2461,7 @@ sub_f9c9h:
         add hl,de               ;f9df	19 	. 
         ld (lfabch),hl          ;f9e0	22 bc fa 	" . . 
         ld (lfab4h),hl          ;f9e3	22 b4 fa 	" . . 
-        ld (lfab0h),hl          ;f9e6	22 b0 fa 	" . . 
+        ld (D012),hl            ;f9e6	22 b0 fa 	" . . 
         pop af                  ;f9e9	f1 	. 
         ld hl,(lfb1bh)          ;f9ea	2a 1b fb 	* . . 
         call sub_f56ch          ;f9ed	cd 6c f5 	. l . 
@@ -2465,7 +2471,7 @@ sub_f9c9h:
         add hl,de               ;f9f9	19 	. 
         ld (lfabah),hl          ;f9fa	22 ba fa 	" . . 
         ld (lfab2h),hl          ;f9fd	22 b2 fa 	" . . 
-        ld (lfaaeh),hl          ;fa00	22 ae fa 	" . . 
+        ld (D013),hl          ;fa00	22 ae fa 	" . . 
         ld (ix+014h),051h       ;fa03	dd 36 14 51 	. 6 . Q 
         xor a                   ;fa07	af 	. 
         ld (D010+00ah),a           ;fa08	32 80 fa 	2 . . 
@@ -2535,16 +2541,16 @@ sub_fa67h:
 
 D010:
         defb 000h               ;fa76   D010 + 00
-        defb 000h               ;fa77   D010 + 01       bit7 = Proportional Spacing
+        defb 000h               ;fa77   D010 + 01 bit7 = Proportional Spacing
         defb 080h               ;fa78   D010 + 02
         defb 000h               ;fa79   D010 + 03
         defb 000h               ;fa7a   D010 + 04
-        defb 000h               ;fa7b   D010 + 05       Line Spacing
+        defb 000h               ;fa7b   D010 + 05 Line Spacing
         defb 012h               ;fa7c   D010 + 06
         defb 000h               ;fa7d   D010 + 07
         defb 000h               ;fa7e   D010 + 08
         defb 000h               ;fa7f   D010 + 09
-        defb 000h               ;fa80   D010 + 0a
+        defb 000h               ;fa80   D010 + 0a Pen position (0 pen up, 1 pen down, 2 make point)
         defb 001h               ;fa81   D010 + 0b
         defb 000h               ;fa82   D010 + 0c
         defb 000h               ;fa83   D010 + 0d
@@ -2594,10 +2600,10 @@ D007_whe_y:
         defb 00                 ;faac
         defb 00                 ;faad
 
-lfaaeh:
+D013:
 	nop			;faae	00 	. 
 	nop			;faaf	00 	. 
-lfab0h:
+D012:
 	nop			;fab0	00 	. 
 	nop			;fab1	00 	. 
 lfab2h:
