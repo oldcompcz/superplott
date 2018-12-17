@@ -1438,61 +1438,61 @@ cmd_ic:
 ; * PRINT #4; "CP"; N
 ; *****************************************************************************
 cmd_cp: 
-	rst 28h			;f31a	ef 	. 
-	ex de,hl			;f31b	eb 	. 
-	inc b			;f31c	04 	. 
-	jr c,lf2ech		;f31d	38 cd 	8 . 
-	or h			;f31f	b4 	. 
-	rst 28h			;f320	ef 	. 
-	push de			;f321	d5 	. 
-	ld a,05ah		;f322	3e 5a 	> Z 
-	ld (0f362h),a		;f324	32 62 f3 	2 b . 
-	ld a,009h		;f327	3e 09 	> . 
-	ld (0f373h),a		;f329	32 73 f3 	2 s . 
-	ld a,023h		;f32c	3e 23 	> # 
-	ld (lf376h),a		;f32e	32 76 f3 	2 v . 
-	xor 008h		;f331	ee 08 	. . 
-	ld (lf379h),a		;f333	32 79 f3 	2 y . 
-	ld a,00fh		;f336	3e 0f 	> . 
-	ld (lf3a6h),a		;f338	32 a6 f3 	2 . . 
-	ld hl,04000h		;f33b	21 00 40 	! . @ 
-	xor a			;f33e	af 	. 
-	ld (D015),a		;f33f	32 12 fb 	2 . . 
-	ld (ix+014h),003h		;f342	dd 36 14 03 	. 6 . . 
+        rst 28h                 ;f31a   call fp calculator
+        defb 0ebh               ;f31b   get-mem 11
+        defb 004h               ;f31c   multiply
+        defb 038h               ;f31d   end-calc
+
+        call sub_efb4h          ;f31e	cd b4 ef 	. . . 
+        push de                 ;f321	d5 	. 
+        ld a,05ah               ;f322	3e 5a 	> Z 
+        ld (0f362h),a           ;f324	32 62 f3 	2 b . 
+        ld a,009h               ;f327	3e 09 	> . 
+        ld (0f373h),a           ;f329	32 73 f3 	2 s . 
+        ld a,023h               ;f32c	3e 23 	> # 
+        ld (lf376h),a           ;f32e	32 76 f3 	2 v . 
+        xor 008h                ;f331	ee 08 	. . 
+        ld (lf379h),a           ;f333	32 79 f3 	2 y . 
+        ld a,00fh               ;f336	3e 0f 	> . 
+        ld (lf3a6h),a           ;f338	32 a6 f3 	2 . . 
+        ld hl,04000h            ;f33b	21 00 40 	! . @ 
+        xor a                   ;f33e	af 	. 
+        ld (D015),a             ;f33f	32 12 fb 	2 . . 
+        ld (ix+014h),003h       ;f342	dd 36 14 03 	. 6 . . 
 lf346h:
-	ld (ix+015h),008h		;f346	dd 36 15 08 	. 6 . . 
+        ld (ix+015h),008h       ;f346	dd 36 15 08 	. 6 . . 
 lf34ah:
-	ld (ix+016h),008h		;f34a	dd 36 16 08 	. 6 . . 
+        ld (ix+016h),008h       ;f34a	dd 36 16 08 	. 6 . . 
 lf34eh:
-	ld b,020h		;f34e	06 20 	.   
+        ld b,020h               ;f34e	06 20 	.   
 lf350h:
-	ld c,080h		;f350	0e 80 	. . 
+        ld c,080h               ;f350	0e 80 	. . 
 lf352h:
-	ld a,(hl)			;f352	7e 	~ 
-	and c			;f353	a1 	. 
-	jr z,lf358h		;f354	28 02 	( . 
-	ld a,001h		;f356	3e 01 	> . 
+        ld a,(hl)               ;f352	7e 	~ 
+        and c                   ;f353	a1 	. 
+        jr z,lf358h             ;f354	28 02 	( . 
+        ld a,001h               ;f356	3e 01 	> . 
 lf358h:
-	ld (D010+00ah),a		;f358	32 80 fa 	2 . . 
-	ex (sp),hl			;f35b	e3 	. 
-	ex de,hl			;f35c	eb 	. 
-	ld hl,(D013)		;f35d	2a ae fa 	* . . 
-	and a			;f360	a7 	. 
-	adc hl,de		;f361	ed 5a 	. Z 
-	ld (D013),hl		;f363	22 ae fa 	" . . 
-	ex de,hl			;f366	eb 	. 
-	ex (sp),hl			;f367	e3 	. 
-	push hl			;f368	e5 	. 
-	push bc			;f369	c5 	. 
-	call sub_f3e9h		;f36a	cd e9 f3 	. . . 
-	call sub_f811h		;f36d	cd 11 f8 	. . . 
-	pop bc			;f370	c1 	. 
-	pop hl			;f371	e1 	. 
-	rrc c		;f372	cb 09 	. . 
-	jr nc,lf352h		;f374	30 dc 	0 . 
+        ld (D010+00ah),a        ;f358	32 80 fa 	2 . . 
+        ex (sp),hl              ;f35b	e3 	. 
+        ex de,hl                ;f35c	eb 	. 
+        ld hl,(D013)            ;f35d	2a ae fa 	* . . 
+        and a                   ;f360	a7 	. 
+        adc hl,de               ;f361	ed 5a 	. Z 
+        ld (D013),hl            ;f363	22 ae fa 	" . . 
+        ex de,hl                ;f366	eb 	. 
+        ex (sp),hl              ;f367	e3 	. 
+        push hl                 ;f368	e5 	. 
+        push bc                 ;f369	c5 	. 
+        call sub_f3e9h          ;f36a	cd e9 f3 	. . . 
+        call sub_f811h          ;f36d	cd 11 f8 	. . . 
+        pop bc                  ;f370	c1 	. 
+        pop hl                  ;f371	e1 	. 
+        rrc c                   ;f372	cb 09 	. . 
+        jr nc,lf352h            ;f374	30 dc 	0 . 
 lf376h:
-	inc hl			;f376	23 	# 
-	djnz lf350h		;f377	10 d7 	. . 
+        inc hl                  ;f376	23 	# 
+        djnz lf350h             ;f377	10 d7 	. . 
 lf379h:
 	dec hl			;f379	2b 	+ 
 	inc h			;f37a	24 	$ 
@@ -2651,75 +2651,87 @@ D008:
         defw 05b00h             ;fac6   5B00 = print buffer
 
 lfac8h:
-	nop			;fac8	00 	. 
-	nop			;fac9	00 	. 
+        defb 000h               ;fac8	00 	. 
+        defb 000h               ;fac9	00 	. 
 lfacah:
-	sub (hl)			;faca	96 	. 
-	nop			;facb	00 	. 
-	ld h,h			;facc	64 	d 
-	add a,b			;facd	80 	. 
+        defb 096h               ;faca	96 	. 
+        defb 000h               ;facb	00 	. 
+        defb 064h               ;facc	64 	d 
+        defb 080h               ;facd	80 	. 
 lfaceh:
-	nop			;face	00 	. 
+        defb 000h               ;face	00 	. 
 lfacfh:
-	nop			;facf	00 	. 
-	ld h,h			;fad0	64 	d 
+        defb 000h               ;facf	00 	. 
+        defb 064h               ;fad0	64 	d 
 lfad1h:
-	add a,b			;fad1	80 	. 
-	daa			;fad2	27 	' 
+        defb 080h               ;fad1	80 	. 
+        defb 027h               ;fad2	27 	' 
 lfad3h:
-	ld bc,00064h		;fad3	01 64 00 	. d . 
-	dec b			;fad6	05 	. 
+        defb 001h               ;fad3	01
+        defb 064h               ;fad4
+        defb 000h               ;fad5
+        defb 005h               ;fad6	05 	. 
 lfad7h:
-	nop			;fad7	00 	. 
+        defb 000h               ;fad7	00 	. 
 lfad8h:
-	nop			;fad8	00 	. 
-	nop			;fad9	00 	. 
-	adc a,h			;fada	8c 	. 
-	add a,h			;fadb	84 	. 
-	ld a,h			;fadc	7c 	| 
-	ld (hl),h			;fadd	74 	t 
-	ld l,h			;fade	6c 	l 
-	ld h,h			;fadf	64 	d 
-	ld e,(hl)			;fae0	5e 	^ 
-	ld e,b			;fae1	58 	X 
-	ld d,h			;fae2	54 	T 
-	ld d,b			;fae3	50 	P 
-	ld c,h			;fae4	4c 	L 
-	ld c,b			;fae5	48 	H 
-	ld b,h			;fae6	44 	D 
-	ld b,b			;fae7	40 	@ 
-	inc a			;fae8	3c 	< 
-	jr c,lfb1fh		;fae9	38 34 	8 4 
-	ld (02e30h),a		;faeb	32 30 2e 	2 0 . 
-	inc l			;faee	2c 	, 
-	ld hl,(02628h)		;faef	2a 28 26 	* ( & 
-	inc h			;faf2	24 	$ 
-	ld (01e20h),hl		;faf3	22 20 1e 	"   . 
-	inc e			;faf6	1c 	. 
-	ld a,(de)			;faf7	1a 	. 
-	jr D014		;faf8	18 16 	. . 
-	dec d			;fafa	15 	. 
-	inc d			;fafb	14 	. 
-	inc de			;fafc	13 	. 
-	nop			;fafd	00 	. 
-	nop			;fafe	00 	. 
-	ld bc,00000h		;faff	01 00 00 	. . . 
-	nop			;fb02	00 	. 
-	nop			;fb03	00 	. 
-	nop			;fb04	00 	. 
-	nop			;fb05	00 	. 
-	nop			;fb06	00 	. 
-	nop			;fb07	00 	. 
-	nop			;fb08	00 	. 
-	nop			;fb09	00 	. 
-	nop			;fb0a	00 	. 
-	nop			;fb0b	00 	. 
+        defb 000h               ;fad8	00 	. 
+        defb 000h               ;fad9	00 	. 
+        defb 08ch               ;fada	8c 	. 
+        defb 084h               ;fadb	84 	. 
+        defb 07ch               ;fadc	7c 	| 
+        defb 074h               ;fadd	74 	t 
+        defb 06ch               ;fade	6c 	l 
+        defb 064h               ;fadf	64 	d 
+        defb 05eh               ;fae0	5e 	^ 
+        defb 058h               ;fae1	58 	X 
+        defb 054h               ;fae2	54 	T 
+        defb 050h               ;fae3	50 	P 
+        defb 04ch               ;fae4	4c 	L 
+        defb 048h               ;fae5	48 	H 
+        defb 044h               ;fae6	44 	D 
+        defb 040h               ;fae7	40 	@ 
+        defb 03ch               ;fae8	3c 	< 
+        defb 038h               ;fae9	38 	4 
+        defb 034h               ;faea
+        defb 032h               ;faeb
+        defb 030h               ;faec
+        defb 02eh               ;faed
+        defb 02ch               ;faee	2c 	, 
+        defb 02ah               ;faef
+        defb 028h               ;faf0
+        defb 026h               ;faf1
+        defb 024h               ;faf2	24 	$ 
+        defb 022h               ;faf3
+        defb 020h               ;faf4
+        defb 01eh               ;faf5
+        defb 01ch               ;faf6	1c 	. 
+        defb 01ah               ;faf7	1a 	. 
+        defb 018h               ;faf8
+        defb 016h               ;faf9
+        defb 015h               ;fafa	15 	. 
+        defb 014h               ;fafb	14 	. 
+        defb 013h               ;fafc	13 	. 
+        defb 000h               ;fafd	00 	. 
+        defb 000h               ;fafe	00 	. 
+        defb 001h               ;faff
+        defb 000h               ;fb00
+        defb 000h               ;fb01
+        defb 000h               ;fb02	00 	. 
+        defb 000h               ;fb03	00 	. 
+        defb 000h               ;fb04	00 	. 
+        defb 000h               ;fb05	00 	. 
+        defb 000h               ;fb06	00 	. 
+        defb 000h               ;fb07	00 	. 
+        defb 000h               ;fb08	00 	. 
+        defb 000h               ;fb09	00 	. 
+        defb 000h               ;fb0a	00 	. 
+        defb 000h               ;fb0b	00 	. 
 lfb0ch:
-	nop			;fb0c	00 	. 
-	nop			;fb0d	00 	. 
+        defb 000h               ;fb0c	00 	. 
+        defb 000h               ;fb0d	00 	. 
 lfb0eh:
-	nop			;fb0e	00 	. 
-	nop			;fb0f	00 	. 
+        defb 000h               ;fb0e	00 	. 
+        defb 000h               ;fb0f	00 	. 
 D014:
         defw lfc2eh             ;fb10   used by User Line 
 D015:
