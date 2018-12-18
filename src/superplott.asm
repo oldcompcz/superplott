@@ -2106,7 +2106,7 @@ sub_f740h:
         ld a,001h               ;f764
         ld (D010+019h),a        ;f766
         call sub_f9c9h          ;f769   ???
-        ld (ix+015h),03eh       ;f76c   62 '>'
+        ld (ix+015h),03eh       ;f76c   62 lines on page
         jp cmd_ns               ;f770   reset bit 7 at (ix+002h) and return
 
 ; *****************************************************************************
@@ -2115,34 +2115,34 @@ sub_f740h:
 ; *****************************************************************************
 
 LIST:
-	call sub_fa67h		;f773	cd 67 fa 	. g . 
-	ld ix,D010		;f776	dd 21 76 fa 	. ! v . 
-	push af			;f77a	f5 	. 
-	ld a,001h		;f77b	3e 01 	> . 
-	call sub_f721h		;f77d	cd 21 f7 	. ! . 
-	pop af			;f780	f1 	. 
-	sub 0a5h		;f781	d6 a5 	. . 
-	jr c,lf78bh		;f783	38 06 	8 . 
-	call 00c10h		;f785	cd 10 0c 	. . . 
-	jp lef75h		;f788	c3 75 ef 	. u . 
+        call sub_fa67h          ;f773   save all registers into stack
+        ld ix,D010              ;f776
+        push af                 ;f77a   save a 
+        ld a,001h               ;f77b   a is driver for exchange buffers
+        call sub_f721h          ;f77d   exchange buffers
+        pop af                  ;f780
+        sub 0a5h                ;f781   last User Defined Graphics char + 1
+        jr c,lf78bh             ;f783   jump if not equal or greater
+        call 00c10h             ;f785   message printing - PO_TOKENS
+        jp lef75h               ;f788   restore all registers and return
 lf78bh:
-	add a,0a5h		;f78b	c6 a5 	. . 
-	cp 020h		;f78d	fe 20 	.   
-	jr c,lf7a6h		;f78f	38 15 	8 . 
-	cp 080h		;f791	fe 80 	. . 
-	jr c,lf799h		;f793	38 04 	8 . 
-	cp 090h		;f795	fe 90 	. . 
-	jr c,lf7a6h		;f797	38 0d 	8 . 
+        add a,0a5h              ;f78b   revert subtract from previous test
+        cp 020h                 ;f78d   does a contain space?
+        jr c,lf7a6h             ;f78f   jump if not equal or greater
+        cp 080h                 ;f791   last char of low ascii + 1
+        jr c,lf799h             ;f793   jump if not equal or greater
+        cp 090h                 ;f795   national chars???
+        jr c,lf7a6h             ;f797   jump if not equal or greater
 lf799h:
-	dec (ix+014h)		;f799	dd 35 14 	. 5 . 
-	jr nz,lf7a6h		;f79c	20 08 	  . 
-	push af			;f79e	f5 	. 
-	call sub_f9c9h		;f79f	cd c9 f9 	. . . 
-	dec (ix+014h)		;f7a2	dd 35 14 	. 5 . 
-	pop af			;f7a5	f1 	. 
+        dec (ix+014h)           ;f799   chars until end of line
+        jr nz,lf7a6h            ;f79c
+        push af                 ;f79e   save char
+        call sub_f9c9h          ;f79f	cd c9 f9 	. . . 
+        dec (ix+014h)           ;f7a2   chars until end of line
+        pop af                  ;f7a5   restore char
 lf7a6h:
-	call sub_f7bfh		;f7a6	cd bf f7 	. . . 
-	jp lef75h		;f7a9	c3 75 ef 	. u .
+        call sub_f7bfh          ;f7a6   call WRITE
+        jp lef75h               ;f7a9   restore all registers and return
 
 ; *****************************************************************************
 ; * WRITE - Print of character
@@ -2153,11 +2153,11 @@ WRITE:
         call sub_fa67h          ;f7ac   save all registers into stack
         ld ix,D010              ;f7af
         push af                 ;f7b3   save a 
-        xor a                   ;f7b4
+        xor a                   ;f7b4   a is driver for exchange buffers
         call sub_f721h          ;f7b5   exchange buffers
         pop af                  ;f7b8   restore a
         call sub_f7bfh          ;f7b9
-        jp lef75h               ;f7bc	c3 75 ef 	. u . 
+        jp lef75h               ;f7bc   Restore all registers and return
 
 sub_f7bfh:
         ld (ix+011h),000h       ;f7bf
@@ -2211,6 +2211,7 @@ sub_f811h:
         jr c,lf820h             ;f81c   test for V and skip over rst 8
         rst 8                   ;f81e 
         inc d                   ;f81f 
+; Wait for new paper loading
 lf820h:
         ld a,007h               ;f820 
         ex af,af'               ;f822 
@@ -2250,7 +2251,7 @@ lf855h:
 	res 1,(ix+018h)		;f858	dd cb 18 8e 	. . . . 
 	ret			;f85c	c9 	. 
 
-; ???
+; ??? used by LIST
 sub_f85dh:
         bit 1,(ix+018h)         ;f85d
         ret z                   ;f861
@@ -2269,77 +2270,81 @@ sub_f87dh:
 	ld b,d			;f880	42 	B 
 	ld c,e			;f881	4b 	K 
 	jr lf889h		;f882	18 05 	. .
- 
+
+; returns hl as x, de as y
 sub_f884h:
-        ld a,0feh               ;f884	3e fe 	> . 
+        ld a,0feh               ;f884   RETURN ascii char?
         call sub_fa2eh          ;f886	cd 2e fa 	. . .
- 
 lf889h:
-	ld a,0feh		;f889	3e fe 	> . 
-	call sub_fa4ah		;f88b	cd 4a fa 	. J . 
-	ld hl,(lfab4h)		;f88e	2a b4 fa 	* . . 
-	add hl,de			;f891	19 	. 
-	ex de,hl			;f892	eb 	. 
-	ld hl,(lfab2h)		;f893	2a b2 fa 	* . . 
-	pop bc			;f896	c1 	. 
-	add hl,bc			;f897	09 	. 
-	ret			;f898	c9 	. 
+        ld a,0feh               ;f889	3e fe 	> . 
+        call sub_fa4ah          ;f88b	cd 4a fa 	. J . 
+        ld hl,(lfab4h)          ;f88e	2a b4 fa 	* . . 
+        add hl,de               ;f891	19 	. 
+        ex de,hl                ;f892   set y position
+        ld hl,(lfab2h)          ;f893	2a b2 fa 	* . . 
+        pop bc                  ;f896	c1 	. 
+        add hl,bc               ;f897   set x position
+        ret                     ;f898	c9 	. 
+
+; Print char???
 sub_f899h:
-	push af			;f899	f5 	. 
-	ld a,(D010+019h)		;f89a	3a 8f fa 	: . . 
-	ld (ix+013h),a		;f89d	dd 77 13 	. w . 
-	xor a			;f8a0	af 	. 
-	ld (D015),a		;f8a1	32 12 fb 	2 . . 
-	ld hl,lfab2h		;f8a4	21 b2 fa 	! . . 
-	ld de,lfab6h		;f8a7	11 b6 fa 	. . . 
-	call cpy4bytes		;f8aa	cd 70 f4 	. p . 
-	pop af			;f8ad	f1 	. 
-	cp 00dh		;f8ae	fe 0d 	. . 
-	jp z,sub_f9c9h		;f8b0	ca c9 f9 	. . . 
-	cp 020h		;f8b3	fe 20 	.   
-	ret c			;f8b5	d8 	. 
-	cp 090h		;f8b6	fe 90 	. . 
-	jr c,lf8d5h		;f8b8	38 1b 	8 . 
-	cp 0a5h		;f8ba	fe a5 	. . 
-	jr nc,lf8d3h		;f8bc	30 15 	0 . 
-	sub 090h		;f8be	d6 90 	. . 
-	ld l,a			;f8c0	6f 	o 
-	ld h,000h		;f8c1	26 00 	& . 
-	ld de,0fc04h		;f8c3	11 04 fc 	. . . 
-	add hl,hl			;f8c6	29 	) 
-	add hl,de			;f8c7	19 	. 
-	ld a,(hl)			;f8c8	7e 	~ 
-	push hl			;f8c9	e5 	. 
-	call sub_f7bfh		;f8ca	cd bf f7 	. . . 
-	pop hl			;f8cd	e1 	. 
-	inc hl			;f8ce	23 	# 
-	ld a,(hl)			;f8cf	7e 	~ 
-	jp sub_f7bfh		;f8d0	c3 bf f7 	. . . 
+        push af                 ;f899	f5 	. 
+        ld a,(D010+019h)        ;f89a	3a 8f fa 	: . . 
+        ld (ix+013h),a          ;f89d	dd 77 13 	. w . 
+        xor a                   ;f8a0	af 	. 
+        ld (D015),a             ;f8a1	32 12 fb 	2 . . 
+        ld hl,lfab2h            ;f8a4	21 b2 fa 	! . . 
+        ld de,lfab6h            ;f8a7	11 b6 fa 	. . . 
+        call cpy4bytes          ;f8aa	cd 70 f4 	. p . 
+        pop af                  ;f8ad	f1 	. 
+        cp 00dh                 ;f8ae   test for ENTER
+        jp z,sub_f9c9h          ;f8b0
+        cp 020h                 ;f8b3   test for SPACE
+        ret c                   ;f8b5
+        cp 090h                 ;f8b6   test for end of ascii
+        jr c,lf8d5h             ;f8b8   jmp if not greater
+        cp 0a5h                 ;f8ba   test for end of graphics chars
+        jr nc,lf8d3h            ;f8bc	30 15 	0 . 
+        sub 090h                ;f8be	d6 90 	. . 
+        ld l,a                  ;f8c0	6f 	o 
+        ld h,000h               ;f8c1	26 00 	& . 
+        ld de,0fc04h            ;f8c3	11 04 fc 	. . . 
+        add hl,hl               ;f8c6	29 	) 
+        add hl,de               ;f8c7	19 	. 
+        ld a,(hl)               ;f8c8	7e 	~ 
+        push hl                 ;f8c9	e5 	. 
+        call sub_f7bfh          ;f8ca	cd bf f7 	. . . 
+        pop hl                  ;f8cd	e1 	. 
+        inc hl                  ;f8ce	23 	# 
+        ld a,(hl)               ;f8cf	7e 	~ 
+        jp sub_f7bfh            ;f8d0	c3 bf f7 	. . . 
+
 lf8d3h:
-	ld a,020h		;f8d3	3e 20 	>   
+        ld a,020h               ;f8d3   convert current char to SPACE
 lf8d5h:
-	ld (ix+012h),a		;f8d5	dd 77 12 	. w . 
+        ld (ix+012h),a          ;f8d5   save current char
 lf8d8h:
-	sub 01ah		;f8d8	d6 1a 	. . 
-	ld hl,lfc4dh		;f8da	21 4d fc 	! M . 
-	ld d,a			;f8dd	57 	W 
-	ld b,000h		;f8de	06 00 	. . 
+        sub 01ah                ;f8d8   sub 26
+        ld hl,lfc4dh            ;f8da	21 4d fc 	! M . 
+        ld d,a                  ;f8dd	57 	W 
+        ld b,000h               ;f8de	06 00 	. . 
 lf8e0h:
-	ld e,b			;f8e0	58 	X 
-	ld a,(hl)			;f8e1	7e 	~ 
-	rlca			;f8e2	07 	. 
-	and 01fh		;f8e3	e6 1f 	. . 
-	rra			;f8e5	1f 	. 
-	inc a			;f8e6	3c 	< 
-	jr nc,lf8eah		;f8e7	30 01 	0 . 
-	inc e			;f8e9	1c 	. 
+        ld e,b                  ;f8e0	58 	X 
+        ld a,(hl)               ;f8e1	7e 	~ 
+        rlca                    ;f8e2	07 	. 
+        and 01fh                ;f8e3	e6 1f 	. . 
+        rra                     ;f8e5	1f 	. 
+        inc a                   ;f8e6	3c 	< 
+        jr nc,lf8eah            ;f8e7	30 01 	0 . 
+        inc e                   ;f8e9	1c 	. 
 lf8eah:
-	dec d			;f8ea	15 	. 
-	jr z,lf8f2h		;f8eb	28 05 	( . 
-	add a,e			;f8ed	83 	. 
-	ld c,a			;f8ee	4f 	O 
-	add hl,bc			;f8ef	09 	. 
-	jr lf8e0h		;f8f0	18 ee 	. . 
+        dec d                   ;f8ea	15 	. 
+        jr z,lf8f2h             ;f8eb	28 05 	( . 
+        add a,e                 ;f8ed	83 	. 
+        ld c,a                  ;f8ee	4f 	O 
+        add hl,bc               ;f8ef	09 	. 
+        jr lf8e0h               ;f8f0	18 ee 	. . 
+
 lf8f2h:
 	ld d,a			;f8f2	57 	W 
 	ld (D010+004h),de		;f8f3	ed 53 7a fa 	. S z . 
@@ -2452,10 +2457,11 @@ sub_f9b4h:
 	ld (D012),hl		;f9c5	22 b0 fa 	" . . 
 	ret			;f9c8	c9 	.
 
-; ??? called from Exchange buffers
+; ??? called from Exchange buffers and from LIST
 sub_f9c9h:
         call sub_f85dh          ;f9c9	cd 5d f8 	. ] . 
-        ld a,(D010+006h)           ;f9cc	3a 7c fa 	: | . 
+        ld a,(D010+006h)        ;f9cc	3a 7c fa 	: | .
+         
         push af                 ;f9cf	f5 	. 
         ld hl,(lfb1dh)          ;f9d0	2a 1d fb 	* . . 
         call sub_f56ch          ;f9d3	cd 6c f5 	. l . 
@@ -2466,6 +2472,7 @@ sub_f9c9h:
         ld (lfabch),hl          ;f9e0	22 bc fa 	" . . 
         ld (lfab4h),hl          ;f9e3	22 b4 fa 	" . . 
         ld (D012),hl            ;f9e6	22 b0 fa 	" . . 
+
         pop af                  ;f9e9	f1 	. 
         ld hl,(lfb1bh)          ;f9ea	2a 1b fb 	* . . 
         call sub_f56ch          ;f9ed	cd 6c f5 	. l . 
@@ -2475,56 +2482,59 @@ sub_f9c9h:
         add hl,de               ;f9f9	19 	. 
         ld (lfabah),hl          ;f9fa	22 ba fa 	" . . 
         ld (lfab2h),hl          ;f9fd	22 b2 fa 	" . . 
-        ld (D013),hl          ;fa00	22 ae fa 	" . . 
-        ld (ix+014h),051h       ;fa03	dd 36 14 51 	. 6 . Q 
+        ld (D013),hl            ;fa00	22 ae fa 	" . . 
+
+        ld (ix+014h),051h       ;fa03   81 characters per line
         xor a                   ;fa07	af 	. 
-        ld (D010+00ah),a           ;fa08	32 80 fa 	2 . . 
+        ld (D010+00ah),a        ;fa08	32 80 fa 	2 . . 
         call sub_f3e9h          ;fa0b	cd e9 f3 	. . . 
         bit 1,(ix+018h)         ;fa0e	dd cb 18 4e 	. . . N 
         call nz,sub_f84ah       ;fa12	c4 4a f8 	. J . 
         ld a,(sub_f721h+1)      ;fa15	3a 22 f7 	: " . 
         or a                    ;fa18	b7 	. 
         ret z                   ;fa19	c8 	. 
-        dec (ix+015h)           ;fa1a	dd 35 15 	. 5 . 
-        ret nz                  ;fa1d	c0 	. 
-        ld (ix+015h),03eh       ;fa1e	dd 36 15 3e 	. 6 . > 
-        call cmd_hm             ;fa22	cd 91 f5 	. . . 
-        call lf820h             ;fa25	cd 20 f8 	.   . 
-        call sub_f740h          ;fa28	cd 40 f7 	. @ . 
-        jp cmd_in               ;fa2b	c3 57 ee 	. W . 
+        dec (ix+015h)           ;fa1a   decrease page line counter
+        ret nz                  ;fa1d   next line on page
 
+        ld (ix+015h),03eh       ;fa1e   62 lines on page
+        call cmd_hm             ;fa22   go home
+        call lf820h             ;fa25   wait for new paper load
+        call sub_f740h          ;fa28   reset variable set
+        jp cmd_in               ;fa2b   initialize
+;
 sub_fa2eh:
-	push af			;fa2e	f5 	. 
-	ld hl,(lfb13h)		;fa2f	2a 13 fb 	* . . 
-	call sub_f56ch		;fa32	cd 6c f5 	. l . 
-	ld a,006h		;fa35	3e 06 	> . 
-	call sub_f542h		;fa37	cd 42 f5 	. B . 
-	ld b,h			;fa3a	44 	D 
-	ld c,l			;fa3b	4d 	M 
-	pop af			;fa3c	f1 	. 
-	ld hl,(lfb15h)		;fa3d	2a 15 fb 	* . . 
-	call sub_f56ch		;fa40	cd 6c f5 	. l . 
-	ld a,006h		;fa43	3e 06 	> . 
-	call sub_f542h		;fa45	cd 42 f5 	. B . 
-	ex de,hl			;fa48	eb 	. 
-	ret			;fa49	c9 	. 
+        push af                 ;fa2e	f5 	. 
+        ld hl,(lfb13h)          ;fa2f	2a 13 fb 	* . . 
+        call sub_f56ch          ;fa32	cd 6c f5 	. l . 
+        ld a,006h               ;fa35	3e 06 	> . 
+        call sub_f542h          ;fa37	cd 42 f5 	. B . 
+        ld b,h                  ;fa3a	44 	D 
+        ld c,l                  ;fa3b	4d 	M 
+        pop af                  ;fa3c	f1 	. 
+        ld hl,(lfb15h)          ;fa3d	2a 15 fb 	* . . 
+        call sub_f56ch          ;fa40	cd 6c f5 	. l . 
+        ld a,006h               ;fa43	3e 06 	> . 
+        call sub_f542h          ;fa45	cd 42 f5 	. B . 
+        ex de,hl                ;fa48	eb 	. 
+        ret                     ;fa49	c9 	. 
+;
 sub_fa4ah:
-	push af			;fa4a	f5 	. 
-	ld hl,(lfb19h)		;fa4b	2a 19 fb 	* . . 
-	call sub_f56ch		;fa4e	cd 6c f5 	. l . 
-	ld a,00ah		;fa51	3e 0a 	> . 
-	call sub_f542h		;fa53	cd 42 f5 	. B . 
-	add hl,de			;fa56	19 	. 
-	ex de,hl			;fa57	eb 	. 
-	pop af			;fa58	f1 	. 
-	ld hl,(lfb17h)		;fa59	2a 17 fb 	* . . 
+        push af                 ;fa4a	f5 	. 
+        ld hl,(lfb19h)          ;fa4b	2a 19 fb 	* . . 
+        call sub_f56ch          ;fa4e	cd 6c f5 	. l . 
+        ld a,00ah               ;fa51	3e 0a 	> . 
+        call sub_f542h          ;fa53	cd 42 f5 	. B . 
+        add hl,de               ;fa56	19 	. 
+        ex de,hl                ;fa57	eb 	. 
+        pop af                  ;fa58	f1 	. 
+        ld hl,(lfb17h)          ;fa59	2a 17 fb 	* . . 
 lfa5ch:
-	call sub_f56ch		;fa5c	cd 6c f5 	. l . 
-	ld a,00ah		;fa5f	3e 0a 	> . 
-	call sub_f542h		;fa61	cd 42 f5 	. B . 
-	add hl,bc			;fa64	09 	. 
-	ex (sp),hl			;fa65	e3 	. 
-	jp (hl)			;fa66	e9 	.
+        call sub_f56ch          ;fa5c	cd 6c f5 	. l . 
+        ld a,00ah               ;fa5f	3e 0a 	> . 
+        call sub_f542h          ;fa61	cd 42 f5 	. B . 
+        add hl,bc               ;fa64	09 	. 
+        ex (sp),hl              ;fa65	e3 	. 
+        jp (hl)                 ;fa66	e9 	.
 
 ; Save all registers into stack
 sub_fa67h:
@@ -2562,13 +2572,13 @@ D010:
         defb 000h               ;fa85   D010 + 0f
         defb 000h               ;fa86   D010 + 10
         defb 000h               ;fa87   D010 + 11
-        defb 000h               ;fa88   D010 + 12
+        defb 000h               ;fa88   D010 + 12 char to be printed
         defb 001h               ;fa89   D010 + 13
-        defb 0e5h               ;fa8a   D010 + 14
-        defb 008h               ;fa8b   D010 + 15
+        defb 0e5h               ;fa8a   D010 + 14 81-current chars per line
+        defb 008h               ;fa8b   D010 + 15 62-current text line on page
         defb 0d9h               ;fa8c   D010 + 16
         defb 000h               ;fa8d   D010 + 17
-        defb 000h               ;fa8e   D010 + 18
+        defb 000h               ;fa8e   D010 + 18 bit1 = ???
         defb 001h               ;fa8f   D010 + 19
         defb 000h               ;fa90   D010 + 1a
         defb 000h               ;fa91   D010 + 1b
@@ -2619,11 +2629,11 @@ D012:
         defb 000h               ;fab0	00 	. 
         defb 000h               ;fab1	00 	. 
 lfab2h:
-        defb 000h               ;fab2	00 	. 
-        defb 000h               ;fab3	00 	. 
+        defb 000h               ;fab2   used by LIST
+        defb 000h               ;fab3
 lfab4h:
-        defb 000h               ;fab4	00 	. 
-        defb 000h               ;fab5	00 	. 
+        defb 000h               ;fab4   used by LIST
+        defb 000h               ;fab5
 lfab6h:
         defb 000h               ;fab6	00 	. 
         defb 000h               ;fab7	00 	. 
@@ -2735,19 +2745,19 @@ lfb0eh:
 D014:
         defw lfc2eh             ;fb10   used by User Line 
 D015:
-        defb 000h               ;fb12	used by User Line
+        defb 000h               ;fb12   used by User Line
 lfb13h:
-        defb 018h               ;fb13   18
-        defb 000h               ;fb14   00
+        defb 018h               ;fb13   used by LIST
+        defb 000h               ;fb14
 lfb15h:
-        defb 000h               ;fb15   00
-        defb 000h               ;fb16   00
+        defb 000h               ;fb15   used by LIST
+        defb 000h               ;fb16
 lfb17h:
-        defb 000h               ;fb17   00
-        defb 000h               ;fb18   00
+        defb 000h               ;fb17   used by LIST
+        defb 000h               ;fb18
 lfb19h:
-        defb 028h               ;fb19   28
-        defb 000h               ;fb1a   00
+        defb 028h               ;fb19   used by LIST
+        defb 000h               ;fb1a
 lfb1bh:
         defb 000h               ;fb1b   00
         defb 000h               ;fb1c   00
